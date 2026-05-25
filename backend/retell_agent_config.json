@@ -1,0 +1,862 @@
+{
+  "agent_id": "",
+  "channel": "voice",
+  "last_modification_timestamp": 1779265724304,
+  "agent_name": "Alex — Mitchell's Fruit Farms",
+  "response_engine": {
+    "type": "conversation-flow",
+    "version": 0,
+    "conversation_flow_id": "conversation_flow_b7dac5bb9b5c"
+  },
+  "webhook_url": "https://bobcat-breeding-prudishly.ngrok-free.dev/api/retell/webhook",
+  "language": [
+    "en-US"
+  ],
+  "data_storage_setting": "everything",
+  "opt_in_signed_url": false,
+  "end_call_after_silence_ms": 15000,
+  "version": 0,
+  "assigned_tags": [],
+  "is_published": true,
+  "version_title": "",
+  "post_call_analysis_model": "gpt-4.1-mini",
+  "pii_config": {
+    "mode": "post_call",
+    "categories": []
+  },
+  "handbook_config": {
+    "echo_verification": false,
+    "speech_normalization": true,
+    "default_personality": false,
+    "scope_boundaries": true,
+    "natural_filler_words": false,
+    "nato_phonetic_alphabet": false,
+    "high_empathy": true,
+    "ai_disclosure": false,
+    "smart_matching": false
+  },
+  "analysis_successful_prompt": "Evaluate whether the agent successfully handled the call. A successful call means the agent answered the caller's question, captured their inquiry or order details, or connected them to the right team — without causing frustration or running into technical issues.",
+  "analysis_summary_prompt": "Write a 1-3 sentence summary of the call. Capture the caller's purpose (inquiry, complaint, B2B order, export interest, product info, etc.), what was resolved, and any follow-up action needed.",
+  "analysis_user_sentiment_prompt": "Evaluate the caller's sentiment, mood, and satisfaction level throughout the call.",
+  "post_call_analysis_data": [
+    {
+      "type": "system-presets",
+      "name": "call_summary",
+      "description": "Write a 1-3 sentence summary of the call. Capture the caller's purpose (inquiry, complaint, B2B order, export interest, product info, etc.), what was resolved, and any follow-up action needed."
+    },
+    {
+      "type": "system-presets",
+      "name": "call_successful",
+      "description": "Evaluate whether the agent successfully handled the call. A successful call means the agent answered the caller's question, captured their inquiry or order details, or connected them to the right team — without causing frustration or running into technical issues."
+    },
+    {
+      "type": "system-presets",
+      "name": "user_sentiment",
+      "description": "Evaluate the caller's sentiment, mood, and satisfaction level throughout the call."
+    }
+  ],
+  "voice_id": "cartesia-Marissa",
+  "voice_temperature": 0.7,
+  "voice_speed": 0.95,
+  "volume": 1,
+  "enable_backchannel": true,
+  "backchannel_frequency": 0.5,
+  "backchannel_words": [
+    "got it",
+    "sure",
+    "mm-hmm",
+    "okay"
+  ],
+  "reminder_trigger_ms": 8000,
+  "reminder_max_count": 2,
+  "max_call_duration_ms": 3600000,
+  "interruption_sensitivity": 0.8,
+  "boosted_keywords": [
+    "Mitchell's",
+    "FMCG",
+    "ketchup",
+    "jam",
+    "marmalade",
+    "pickle",
+    "sauce",
+    "beverage",
+    "chocolate",
+    "confectionery",
+    "ready meal",
+    "ready to cook",
+    "export",
+    "wholesale",
+    "distributor",
+    "bulk order",
+    "retail",
+    "supermarket",
+    "HoReCa",
+    "hotel",
+    "restaurant",
+    "importer",
+    "Middle East",
+    "UK",
+    "USA",
+    "Canada",
+    "Australia",
+    "Europe",
+    "product inquiry",
+    "complaint",
+    "trade account",
+    "price list",
+    "delivery",
+    "order",
+    "halal",
+    "Pakistan",
+    "heritage"
+  ],
+  "ambient_sound": "call-center",
+  "ambient_sound_volume": 0.4,
+  "responsiveness": 1,
+  "normalize_for_speech": true,
+  "begin_message_delay_ms": 0,
+  "allow_user_dtmf": true,
+  "user_dtmf_options": {},
+  "conversationFlow": {
+    "conversation_flow_id": "conversation_flow_b7dac5bb9b5c",
+    "version": 0,
+    "global_prompt": "ROLE: You are Alex, a professional, warm, and knowledgeable AI phone agent for Mitchell's Fruit Farms Limited — a leading Pakistani FMCG food manufacturing company established in 1933. You represent a trusted heritage brand that produces jams, ketchup, sauces, pickles, beverages, chocolates, confectionery, and ready-to-eat/ready-to-cook products. You handle both consumer (B2C) and business (B2B) callers.\n\nCRITICAL — HOW THIS AGENT WORKS:\n- You collect information through conversation nodes.\n- When all required information is collected and confirmed by the caller, you TRANSITION to the appropriate function node.\n- The function node handles the tool call automatically. You do NOT call tools yourself mid-conversation.\n- Never say \"I'm logging this now\" or \"let me submit this\" inside a conversation node. Just transition.\n\nGLOBAL RULES — ALWAYS ACTIVE:\n1. Never make up product names, prices, or availability. Answer only from {{product_catalogue}} and {{company_info}}.\n2. Always confirm collected details back to the caller before transitioning to a function node.\n3. Use the caller's name at most once per call — only in the opening greeting.\n4. Keep every response under 2 sentences. Be direct and natural.\n5. Never say \"Is there anything else I can help you with?\" more than once per call.\n6. When the caller says goodbye or thank you, transition to End_Call immediately.\n7. Do not start responses with filler words like Certainly, Absolutely, or Of course.\n8. If {{caller_name}} is not empty, do NOT ask for their name again.\n9. This agent is available 24/7 — never mention office hours unless the caller specifically asks.\n10. This is NOT a restaurant or food delivery service. Mitchell's products are sold in supermarkets and grocery stores.\n11. Never describe a product unless the caller specifically asks.\n12. Never repeat the same sentence twice in a row.\n\nINTERRUPTION RULES:\n1. If the caller speaks while you are talking, STOP IMMEDIATELY.\n2. Listen fully before responding.\n3. Never repeat what you were saying before the interruption.\n\nCALLER TYPE — DETECT ON EVERY CALL:\n- CONSUMER: Individual asking about products, where to buy, ingredients, halal status, shelf life, or general product information.\n- B2B/TRADE: Distributor, retailer, supermarket, wholesaler, or HoReCa buyer asking about wholesale, trade accounts, or bulk orders.\n- EXPORT: International buyer or overseas Pakistani asking about importing Mitchell's products.\n- COMPLAINT: Any caller reporting a product quality issue, damaged goods, or service problem.\n- CONFUSED: Caller is unsure — respond with: \"I can help with products, distributor inquiries, exports, or general information — what can I help you with?\"\n\n24/7 AVAILABILITY:\nThis AI agent is always available. Never say the office is closed.\nIf the caller requests a human and the team is unavailable:\nSay: \"Our team isn't available right now, but I can arrange a callback — would that work?\"\nIf yes → transition to Callback_Request.\n\nDYNAMIC VARIABLES (do not edit):\n- {{caller_name}} — saved name, or empty\n- {{is_returning_caller}} — 'true' or 'false'\n- {{caller_phone}} — caller's phone in E.164 format\n- {{office_is_open}} — 'true' or 'false'\n- {{office_open_time}} / {{office_close_time}} — business hours\n- {{product_catalogue}} — complete Mitchell's product catalogue. ONLY source of truth for products.\n- {{company_info}} — company information: location, history, distribution, policies.\n- {{export_markets}} — countries Mitchell's currently exports to.\n- {{open_greeting}} — custom greeting if set, otherwise empty.\n- {{closed_greeting}} — fallback phrase for human-request deflection.\n- {{trade_team_contact}} / {{export_team_contact}} — team contact info.",
+    "nodes": [
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "You speak first. Follow ONLY the first matching rule and stop immediately.\n\nRULE 1 — Returning caller:\nIf {{is_returning_caller}} is 'true' AND {{caller_name}} is not empty:\n  Say: \"Hello {{caller_name}}, welcome back to Mitchell's Fruit Farms. How can I help you today?\"\n  STOP.\n\nRULE 2 — Custom greeting:\nIf {{open_greeting}} is not empty:\n  Say {{open_greeting}} exactly as written.\n  STOP.\n\nRULE 3 — Default:\n  Say: \"Thanks for calling Mitchell's Fruit Farms — I'm Alex, how can I help you today?\"\n  STOP.\n\nAfter speaking, listen and wait. Do not say anything else until the caller responds."
+        },
+        "name": "Greeting",
+        "edges": [
+          {
+            "destination_node_id": "node-consumer-inquiry",
+            "id": "edge-greeting-to-consumer-inquiry",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller is a consumer asking about products, where to buy, ingredients, halal status, shelf life, or general product information."
+            }
+          },
+          {
+            "destination_node_id": "node-trade-inquiry",
+            "id": "edge-greeting-to-trade",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller identifies as a distributor, retailer, supermarket, wholesaler, HoReCa buyer, or asks about bulk orders, trade accounts, or wholesale pricing."
+            }
+          },
+          {
+            "destination_node_id": "node-export-inquiry",
+            "id": "edge-greeting-to-export",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller is calling from outside Pakistan, mentions exporting or importing Mitchell's products internationally, or is an overseas Pakistani community buyer."
+            }
+          },
+          {
+            "destination_node_id": "node-complaint",
+            "id": "edge-greeting-to-complaint",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller wants to raise a complaint about a product quality issue, damaged goods, wrong labelling, or any service problem."
+            }
+          },
+          {
+            "destination_node_id": "node-callback-request",
+            "id": "edge-greeting-to-callback",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller wants to speak to a human representative, leave a message, or request a callback from the team."
+            }
+          },
+          {
+            "destination_node_id": "node-transfer-call",
+            "id": "edge-greeting-to-transfer",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller explicitly insists on being transferred to a live person right now and will not accept a callback offer."
+            }
+          },
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-greeting-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller wants to end the call."
+            }
+          }
+        ],
+        "start_speaker": "agent",
+        "id": "start-node-greeting",
+        "type": "conversation",
+        "display_position": {
+          "x": -810,
+          "y": -2226
+        }
+      },
+      {
+        "name": "Consumer_Inquiry",
+        "edges": [
+          {
+            "destination_node_id": "node-complaint",
+            "id": "edge-consumer-to-complaint",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller raises a product complaint or quality issue during the inquiry."
+            }
+          },
+          {
+            "destination_node_id": "node-trade-inquiry",
+            "id": "edge-consumer-to-trade",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller reveals they are a trade or wholesale buyer."
+            }
+          },
+          {
+            "destination_node_id": "node-callback-request",
+            "id": "edge-consumer-to-callback",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller's question cannot be answered and they agree to leave details for a callback."
+            }
+          },
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-consumer-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller's questions are answered and they are ready to end the call."
+            }
+          }
+        ],
+        "id": "node-consumer-inquiry",
+        "type": "conversation",
+        "display_position": {
+          "x": 126,
+          "y": -1794
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "Answer the caller's question using {{product_catalogue}} and {{company_info}}.\n\nPRODUCT QUESTIONS:\n- Use {{product_catalogue}} for all product names, variants, pack sizes, halal status, and shelf life.\n- Never say the catalogue is unavailable — you always have full product knowledge.\n- If asked about halal: all Mitchell's products are halal certified.\n- Only answer what is in {{product_catalogue}}. Never guess.\n\nWHERE TO BUY:\n- Mitchell's products are available at major supermarkets and grocery stores across Pakistan.\n- Do NOT offer home delivery. Mitchell's is not a food delivery service.\n\nRECOMMENDATIONS:\n- If asked for a recommendation, name ONE product from {{product_catalogue}} briefly.\n\nUNANSWERABLE QUESTIONS:\n- If a specific detail is not in {{product_catalogue}} or {{company_info}}, say: \"I don't have that detail on hand — let me arrange a callback for you.\" Then transition to Callback_Request.\n\nAfter answering:\n- Complaint raised → transition to Complaint.\n- Trade/wholesale buyer revealed → transition to Trade_Inquiry.\n- Cannot answer → transition to Callback_Request.\n- Done → transition to End_Call."
+        }
+      },
+      {
+        "name": "Trade_Inquiry",
+        "edges": [
+          {
+            "destination_node_id": "node-log-trade-inquiry",
+            "id": "edge-trade-to-log",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller has verbally confirmed all 5 trade inquiry details: name, company, location, product interest, and contact. Transition now."
+            }
+          },
+          {
+            "destination_node_id": "node-export-inquiry",
+            "id": "edge-trade-to-export",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller reveals they are an international buyer or exporter, not a local trade account."
+            }
+          },
+          {
+            "destination_node_id": "node-transfer-call",
+            "id": "edge-trade-to-transfer",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller insists on speaking directly to a sales team member right now."
+            }
+          },
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-trade-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller decides not to proceed or wants to end the call."
+            }
+          }
+        ],
+        "id": "node-trade-inquiry",
+        "type": "conversation",
+        "display_position": {
+          "x": 1038,
+          "y": -1746
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "The caller is a B2B trade buyer — distributor, retailer, supermarket, wholesaler, or HoReCa buyer.\n\nDO NOT quote prices, MOQ, or confirm product availability yourself.\n\nCollect the following — naturally, one question at a time:\n1. Full name\n2. Company name\n3. City and country\n4. Product category or specific products of interest\n5. Best phone number or email\n\nOnce all 5 details are collected, read them back:\n\"Just to confirm — [name] from [company], based in [city/country], interested in [products], best contact is [phone/email]. Is that correct?\"\n\nWhen the caller confirms — transition to Log_Trade_Inquiry immediately.\nDo NOT say anything about submitting or logging. Just transition.\n\nIf caller reveals they are international → transition to Export_Inquiry.\nIf caller insists on speaking to sales team now → transition to Transfer_Call.\nIf caller wants to end → transition to End_Call."
+        }
+      },
+      {
+        "tool_id": "tool-log-trade-inquiry",
+        "else_edge": {
+          "destination_node_id": "node-trade-inquiry",
+          "id": "node-log-trade-else",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Else"
+          }
+        },
+        "instruction": {
+          "type": "static_text",
+          "text": "Let me pass your details to our sales team now — just one moment."
+        },
+        "name": "Log Trade Inquiry",
+        "edges": [
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-log-trade-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "log_trade_inquiry tool completed successfully."
+            }
+          }
+        ],
+        "id": "node-log-trade-inquiry",
+        "type": "function",
+        "tool_type": "local",
+        "speak_during_execution": true,
+        "display_position": {
+          "x": 342,
+          "y": -2658
+        },
+        "wait_for_result": true
+      },
+      {
+        "name": "Export_Inquiry",
+        "edges": [
+          {
+            "destination_node_id": "node-log-export-inquiry",
+            "id": "edge-export-to-log",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller has verbally confirmed all 5 export inquiry details: name, company, country, product interest, and contact. Transition now."
+            }
+          },
+          {
+            "destination_node_id": "node-transfer-call",
+            "id": "edge-export-to-transfer",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller insists on speaking to the export team directly right now."
+            }
+          },
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-export-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller decides not to proceed or wants to end the call."
+            }
+          }
+        ],
+        "id": "node-export-inquiry",
+        "type": "conversation",
+        "display_position": {
+          "x": 1758,
+          "y": -1698
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "The caller has an international export or import inquiry.\n\nSay: \"Mitchell's exports to the Middle East, UK, USA, Canada, Australia, Europe, and South Africa — happy to connect you with our export team.\"\n\nDO NOT quote export prices, MOQ, or shipping terms.\n\nCollect the following — naturally, one question at a time:\n1. Full name\n2. Company name\n3. Country they are calling from or importing to\n4. Products of interest\n5. Best phone number or email\n\nOnce all 5 details are collected, read them back:\n\"To confirm — [name] from [company] in [country], interested in [products], best contact is [phone/email]. Is that right?\"\n\nWhen the caller confirms — transition to Log_Export_Inquiry immediately.\nDo NOT say anything about submitting or logging. Just transition.\n\nIf caller insists on speaking to export team now → transition to Transfer_Call.\nIf caller wants to end → transition to End_Call."
+        }
+      },
+      {
+        "tool_id": "tool-log-export-inquiry",
+        "else_edge": {
+          "destination_node_id": "node-export-inquiry",
+          "id": "node-log-export-else",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Else"
+          }
+        },
+        "instruction": {
+          "type": "static_text",
+          "text": "Sending your details to our export team now — just one moment."
+        },
+        "name": "Log Export Inquiry",
+        "edges": [
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-log-export-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "log_export_inquiry tool completed successfully."
+            }
+          }
+        ],
+        "id": "node-log-export-inquiry",
+        "type": "function",
+        "tool_type": "local",
+        "speak_during_execution": true,
+        "display_position": {
+          "x": 966,
+          "y": -2658
+        },
+        "wait_for_result": true
+      },
+      {
+        "name": "Complaint",
+        "edges": [
+          {
+            "destination_node_id": "node-log-complaint",
+            "id": "edge-complaint-to-log",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller has provided complaint details (name, phone, product) and confirmed they want it passed to the quality team. Transition now."
+            }
+          },
+          {
+            "destination_node_id": "node-transfer-call",
+            "id": "edge-complaint-to-transfer",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller is very upset, mentions injury or illness, or demands to speak to a senior team member immediately."
+            }
+          },
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-complaint-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Complaint logged and caller is ready to end the call."
+            }
+          }
+        ],
+        "id": "node-complaint",
+        "type": "conversation",
+        "display_position": {
+          "x": 2910,
+          "y": -1674
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "A caller is raising a complaint. Be empathetic and never defensive.\n\nStep 1 — Acknowledge immediately:\n  Say: \"I'm sorry to hear that — let me make sure this reaches the right team.\"\n\nStep 2 — Collect the following — one at a time:\n  1. Full name\n  2. Phone number\n  3. Product name\n  4. Batch or lot number (on the packaging) — note if unavailable\n  5. Description of the issue\n  6. Purchase location (store name and city)\n  7. Date of purchase if known\n\nStep 3 — Escalation check:\n  If the caller is very upset, mentions injury or illness, or demands a manager:\n  Say: \"Let me transfer you to a senior team member right away.\"\n  Transition to Transfer_Call.\n\nStep 4 — When all details are collected, read them back briefly and ask:\n  \"I have your complaint noted — shall I pass this to our quality team now?\"\n\nWhen the caller confirms — transition to Log_Complaint immediately.\nDo NOT say anything about submitting or logging. Just transition.\n\nNEVER promise refunds, replacements, or timelines.\nNEVER argue with the caller."
+        }
+      },
+      {
+        "tool_id": "tool-log-complaint",
+        "else_edge": {
+          "destination_node_id": "node-complaint",
+          "id": "node-log-complaint-else",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Else"
+          }
+        },
+        "instruction": {
+          "type": "static_text",
+          "text": "Logging your complaint with our quality team now — just one moment."
+        },
+        "name": "Log Complaint",
+        "edges": [
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-log-complaint-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "log_complaint tool completed successfully."
+            }
+          }
+        ],
+        "id": "node-log-complaint",
+        "type": "function",
+        "tool_type": "local",
+        "speak_during_execution": true,
+        "display_position": {
+          "x": 1542,
+          "y": -2658
+        },
+        "wait_for_result": true
+      },
+      {
+        "name": "Callback_Request",
+        "edges": [
+          {
+            "destination_node_id": "node-log-callback",
+            "id": "edge-callback-to-log",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller has confirmed their callback details: name, number, and reason. Transition now."
+            }
+          },
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-callback-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Caller decides not to leave a callback and wants to end the call."
+            }
+          }
+        ],
+        "id": "node-callback-request",
+        "type": "conversation",
+        "display_position": {
+          "x": 4926,
+          "y": -1698
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "The caller wants to leave a message, request a callback, or speak to a human.\n\nDo NOT mention office hours. Say naturally:\n\"Happy to arrange that — can I take your name and best number?\"\n\nCollect the following — one at a time:\n1. Full name\n2. Best phone number (confirm {{caller_phone}} if already known)\n3. Reason for calling in one sentence\n4. Preferred callback time if they have one\n\nOnce all details are collected, read them back:\n\"Got it — [name] at [number], regarding [reason]. Someone from the team will reach out. Is that okay?\"\n\nWhen the caller confirms — transition to Log_Callback immediately.\nDo NOT say anything about submitting or logging. Just transition.\n\nIf caller does not want to leave details → transition to End_Call."
+        }
+      },
+      {
+        "tool_id": "tool-log-callback-request",
+        "else_edge": {
+          "destination_node_id": "node-callback-request",
+          "id": "node-log-callback-else",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Else"
+          }
+        },
+        "instruction": {
+          "type": "static_text",
+          "text": "Noting your callback request now — just one moment."
+        },
+        "name": "Log Callback",
+        "edges": [
+          {
+            "destination_node_id": "end-call-node",
+            "id": "edge-log-callback-to-end",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "log_callback_request tool completed successfully."
+            }
+          }
+        ],
+        "id": "node-log-callback",
+        "type": "function",
+        "tool_type": "local",
+        "speak_during_execution": true,
+        "display_position": {
+          "x": 2166,
+          "y": -2634
+        },
+        "wait_for_result": true
+      },
+      {
+        "name": "End_Call",
+        "id": "end-call-node",
+        "type": "end",
+        "speak_during_execution": true,
+        "display_position": {
+          "x": 6054,
+          "y": -1938
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "\"Thanks for calling Mitchell's Fruit Farms — have a great day!\""
+        }
+      },
+      {
+        "custom_sip_headers": {},
+        "transfer_destination": {
+          "type": "predefined",
+          "number": "+12606007656"
+        },
+        "edge": {
+          "destination_node_id": "start-node-greeting",
+          "id": "edge-transfer-failed",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Transfer failed"
+          }
+        },
+        "instruction": {
+          "type": "static_text",
+          "text": "Please hold — I'm connecting you to a member of our team."
+        },
+        "name": "Transfer Call",
+        "ignore_e164_validation": false,
+        "id": "node-transfer-call",
+        "transfer_option": {
+          "cold_transfer_mode": "sip_refer",
+          "enable_bridge_audio_cue": true,
+          "type": "cold_transfer",
+          "agent_detection_timeout_ms": 30000,
+          "show_transferee_as_caller": false
+        },
+        "type": "transfer_call",
+        "speak_during_execution": true,
+        "display_position": {
+          "x": 3726,
+          "y": -2634
+        }
+      }
+    ],
+    "start_node_id": "start-node-greeting",
+    "start_speaker": "agent",
+    "tools": [
+      {
+        "headers": {},
+        "parameter_type": "json",
+        "method": "POST",
+        "query_params": {},
+        "description": "Logs a B2B trade or wholesale inquiry to the Mitchell's CRM so the sales team can follow up. Call only after all trade inquiry details are confirmed by the caller.",
+        "type": "custom",
+        "url": "https://bobcat-breeding-prudishly.ngrok-free.dev/api/retell/trade-inquiry",
+        "wait_for_result": true,
+        "tool_id": "tool-log-trade-inquiry",
+        "args_at_root": true,
+        "timeout_ms": 15000,
+        "name": "log_trade_inquiry",
+        "response_variables": {
+          "confirmation_message": "$.message",
+          "inquiry_id": "$.inquiry_id"
+        },
+        "speak_during_execution": true,
+        "parameters": {
+          "type": "object",
+          "required": [
+            "caller_name",
+            "caller_phone",
+            "company_name",
+            "location",
+            "product_interest"
+          ],
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "Full name of the trade inquiry contact."
+            },
+            "caller_phone": {
+              "type": "string",
+              "description": "Caller phone number from {{caller_phone}} dynamic variable."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Any additional details or specific requests mentioned by the caller. Empty string if none."
+            },
+            "company_name": {
+              "type": "string",
+              "description": "Name of the company or business the caller represents."
+            },
+            "product_interest": {
+              "type": "string",
+              "description": "Product category or specific Mitchell's products the caller is interested in (e.g. 'ketchup and sauces', 'jams and marmalades', 'beverages')."
+            },
+            "location": {
+              "type": "string",
+              "description": "City and country of the caller's business."
+            },
+            "email": {
+              "type": "string",
+              "description": "Caller's email address if provided. Empty string otherwise."
+            },
+            "caller_type": {
+              "type": "string",
+              "description": "One of: distributor, retailer, supermarket, wholesaler, horeca, other. Based on how the caller described themselves."
+            }
+          }
+        }
+      },
+      {
+        "headers": {},
+        "parameter_type": "json",
+        "method": "POST",
+        "query_params": {},
+        "description": "Logs an international export or import inquiry to the Mitchell's CRM so the export team can follow up. Call only after all export inquiry details are confirmed by the caller.",
+        "type": "custom",
+        "url": "https://bobcat-breeding-prudishly.ngrok-free.dev/api/retell/export-inquiry",
+        "wait_for_result": true,
+        "tool_id": "tool-log-export-inquiry",
+        "args_at_root": true,
+        "timeout_ms": 15000,
+        "name": "log_export_inquiry",
+        "response_variables": {
+          "confirmation_message": "$.message",
+          "inquiry_id": "$.inquiry_id"
+        },
+        "speak_during_execution": true,
+        "parameters": {
+          "type": "object",
+          "required": [
+            "caller_name",
+            "caller_phone",
+            "company_name",
+            "country",
+            "product_interest"
+          ],
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "Full name of the export inquiry contact."
+            },
+            "country": {
+              "type": "string",
+              "description": "Country the caller is calling from or importing to."
+            },
+            "caller_phone": {
+              "type": "string",
+              "description": "Caller phone number from {{caller_phone}} dynamic variable."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Any additional context such as target markets, volumes, or specific requirements. Empty string if none."
+            },
+            "company_name": {
+              "type": "string",
+              "description": "Name of the company or business the caller represents."
+            },
+            "product_interest": {
+              "type": "string",
+              "description": "Product category or specific Mitchell's products of interest."
+            },
+            "email": {
+              "type": "string",
+              "description": "Caller's email address if provided. Empty string otherwise."
+            }
+          }
+        }
+      },
+      {
+        "headers": {},
+        "parameter_type": "json",
+        "method": "POST",
+        "query_params": {},
+        "description": "Logs a product quality complaint or service issue to the Mitchell's quality assurance team. Call only after collecting the caller's name, phone, and complaint description.",
+        "type": "custom",
+        "url": "https://bobcat-breeding-prudishly.ngrok-free.dev/api/retell/complaint-log",
+        "wait_for_result": true,
+        "tool_id": "tool-log-complaint",
+        "args_at_root": true,
+        "timeout_ms": 15000,
+        "name": "log_complaint",
+        "response_variables": {
+          "complaint_id": "$.complaint_id",
+          "confirmation_message": "$.message"
+        },
+        "speak_during_execution": true,
+        "parameters": {
+          "type": "object",
+          "required": [
+            "caller_name",
+            "caller_phone",
+            "complaint_description",
+            "product_name"
+          ],
+          "properties": {
+            "severity": {
+              "type": "string",
+              "description": "One of: low, medium, high, critical. Set to critical if caller mentions injury, illness, or foreign objects. High if very upset. Medium for quality/taste issues. Low for general feedback."
+            },
+            "caller_name": {
+              "type": "string",
+              "description": "Full name of the caller raising the complaint."
+            },
+            "caller_phone": {
+              "type": "string",
+              "description": "Caller phone number from {{caller_phone}} dynamic variable."
+            },
+            "complaint_description": {
+              "type": "string",
+              "description": "Full description of the complaint or issue as described by the caller."
+            },
+            "purchase_location": {
+              "type": "string",
+              "description": "Store name and city where the product was purchased. Empty string if unknown."
+            },
+            "batch_lot_number": {
+              "type": "string",
+              "description": "Batch or lot number printed on the product packaging. Empty string if caller did not have it."
+            },
+            "purchase_date": {
+              "type": "string",
+              "description": "Date of purchase in YYYY-MM-DD format if provided. Empty string if unknown."
+            },
+            "product_name": {
+              "type": "string",
+              "description": "Name of the Mitchell's product the complaint relates to."
+            }
+          }
+        }
+      },
+      {
+        "headers": {},
+        "parameter_type": "json",
+        "method": "POST",
+        "query_params": {},
+        "description": "Logs a callback request from any caller who could not be fully assisted or who called after hours. Use this when the caller leaves their details for a team member to call them back.",
+        "type": "custom",
+        "url": "https://bobcat-breeding-prudishly.ngrok-free.dev/api/retell/callback-request",
+        "wait_for_result": true,
+        "tool_id": "tool-log-callback-request",
+        "args_at_root": true,
+        "timeout_ms": 10000,
+        "name": "log_callback_request",
+        "response_variables": {
+          "callback_id": "$.callback_id",
+          "confirmation_message": "$.message"
+        },
+        "speak_during_execution": true,
+        "parameters": {
+          "type": "object",
+          "required": [
+            "caller_name",
+            "caller_phone",
+            "reason"
+          ],
+          "properties": {
+            "caller_name": {
+              "type": "string",
+              "description": "Full name of the caller."
+            },
+            "reason": {
+              "type": "string",
+              "description": "One of: product_inquiry, trade_inquiry, export_inquiry, complaint, general. What the caller needs help with."
+            },
+            "caller_phone": {
+              "type": "string",
+              "description": "Caller phone number from {{caller_phone}} dynamic variable."
+            },
+            "notes": {
+              "type": "string",
+              "description": "Any additional context about the caller's inquiry. Empty string if none."
+            },
+            "preferred_callback_time": {
+              "type": "string",
+              "description": "Preferred time or window for a callback, as stated by the caller. Empty string if no preference given."
+            }
+          }
+        }
+      }
+    ],
+    "model_choice": {
+      "type": "cascading",
+      "model": "gpt-4o-mini",
+      "high_priority": false
+    },
+    "model_temperature": 0,
+    "tool_call_strict_mode": false,
+    "default_dynamic_variables": {
+      "is_returning_caller": "false",
+      "company_info": "Mitchell's Fruit Farms Limited — Pakistani FMCG food manufacturer established in 1933. Headquartered in Karachi, Pakistan. Products include jams, marmalades, ketchup, sauces, pickles, beverages, chocolates, confectionery, and ready-to-eat/ready-to-cook foods. Available at major supermarkets and grocery stores across Pakistan and internationally.",
+      "trade_team_contact": "",
+      "caller_name": "",
+      "caller_phone": "",
+      "product_catalogue": "MITCHELL'S PRODUCT CATALOGUE — Full Reference\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n1. JAMS & MARMALADES\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Mixed Fruit Jam — classic blend of seasonal fruits; available in 450g and 900g jars\n• Mango Jam — made from Sindhri mangoes; available in 450g and 900g\n• Strawberry Jam — made from fresh strawberries; available in 450g and 900g\n• Apricot Jam — smooth texture, light sweetness; available in 450g and 900g\n• Guava Jelly — smooth, seedless; available in 450g\n• Orange Marmalade — bitter-sweet citrus spread; available in 450g and 900g\n• Lemon Marmalade — tangy citrus spread; available in 450g\n• Rose Petal Jam (Gulkand) — traditional Pakistani rose jam; available in 450g\nAll jams: no artificial colours, halal certified, shelf life 24 months (sealed)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n2. SAUCES & KETCHUP\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Tomato Ketchup — flagship product; available in 300g, 500g, 800g squeeze bottles and 3kg catering packs\n• Chilli Garlic Sauce — medium heat; available in 300g and 800g\n• Hot Sauce — extra spicy; available in 300g\n• Soya Sauce — dark soy; available in 200ml and 500ml bottles\n• Vinegar (White & Malt) — available in 800ml bottles\n• Worcestershire Sauce — available in 200ml\n• BBQ Sauce — smoky flavour; available in 300g\nAll sauces: halal certified, no artificial preservatives in standard range\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n3. PICKLES & CONDIMENTS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Mixed Pickle (Achar) — tangy, oil-based; available in 400g and 800g jars\n• Mango Pickle (Aam ka Achar) — traditional style; available in 400g and 800g\n• Lemon Pickle — preserved lemon; available in 400g\n• Green Chilli Pickle — whole green chillies; available in 400g\n• Garlic Pickle — available in 400g\nAll pickles: halal certified, traditional recipes, shelf life 18 months (sealed)\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n4. BEVERAGES\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Mango Nectar Drink — 30% fruit content; available in 250ml Tetra Pak and 1 litre\n• Mixed Fruit Drink — tropical blend; available in 250ml and 1 litre\n• Guava Nectar — available in 250ml and 1 litre\n• Apple Juice Drink — available in 250ml\n• Lychee Drink — seasonal; available in 250ml\n• Rooh Afza-style Rose Drink (Rose Sherbet) — concentrated; available in 800ml bottles\nAll beverages: halal certified, no artificial colours in nectar range\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n5. CHOCOLATES & CONFECTIONERY\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Jubilee Chocolates — assorted milk chocolates; available in 100g and 250g gift boxes\n• Toffees (Assorted) — individually wrapped; available in 200g and 500g packs\n• Fruit Drops — hard candy; available in 100g and 200g tins\n• Lollipops — assorted flavours; available in retail packs of 12 and 24\n• Candy Sticks — for children; available in 100g packs\nAll confectionery: halal certified, suitable for all ages\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n6. READY-TO-EAT (RTE) FOODS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Baked Beans in Tomato Sauce — available in 400g and 800g cans\n• Canned Sweet Corn — available in 400g cans\n• Canned Peas — available in 400g cans\n• Canned Mushrooms — available in 400g cans\n• Fruit Cocktail (Canned) — mixed tropical fruits in syrup; available in 400g and 800g\n• Canned Peaches — halves in syrup; available in 400g and 800g\nAll canned products: halal certified, long shelf life up to 36 months\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n7. READY-TO-COOK (RTC) PRODUCTS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• Tomato Paste — concentrated; available in 135g and 400g cans\n• Tomato Puree — available in 400g Tetra Pak\n• Pasta Sauce (Tomato & Herb) — available in 350g jars\n• Custard Powder — available in 175g and 300g tins\n• Corn Flour — available in 200g and 400g packs\n• Jelly Crystals (assorted flavours) — available in 80g sachets\n• Baking Powder — available in 100g tins\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nGENERAL PRODUCT INFORMATION\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n• All Mitchell's products are halal certified.\n• Products are available at major supermarkets and grocery stores across Pakistan.\n• Export markets: Middle East, UK, USA, Canada, Australia, Europe, South Africa.\n• For exact retail prices, refer the caller to their nearest store or online retailer.\n• For bulk/wholesale pricing, collect their details and route to the trade team.\n• Shelf life varies by product — see individual category notes above.\n• Mitchell's has been manufacturing since 1933. Headquarters: Karachi, Pakistan.",
+      "export_markets": "Middle East, UK, USA, Canada, Australia, Europe, South Africa",
+      "office_is_open": "true",
+      "open_greeting": "",
+      "closed_greeting": "Our team isn't available right now, but I can arrange a callback for you — would that work?",
+      "office_open_time": "09:00",
+      "office_close_time": "17:00",
+      "export_team_contact": ""
+    },
+    "knowledge_base_ids": [],
+    "kb_config": {
+      "top_k": 3,
+      "filter_score": 0.6
+    },
+    "begin_tag_display_position": {
+      "x": -1314,
+      "y": -2226
+    },
+    "is_published": true,
+    "flex_mode": true,
+    "is_transfer_cf": false
+  }
+}
