@@ -30,7 +30,7 @@ import { getCallsApi, confirmCallOrderApi, getCategoriesApi, reprintOrderApi, ca
 import type { CallRecord, MenuItem, Settings } from "../../type";
 import toast from "react-hot-toast";
 
-// ── Light-theme colour tokens ─────────────────────────────────────────────────
+// Light-theme colour tokens 
 const C = {
   pageBg: "#F8F8FC",
   topBar: "rgba(255,255,255,.98)",
@@ -284,7 +284,7 @@ function DetailPanel({
       (call.transcript || "")
     ).toLowerCase();
     const detected: { item: string; quantity: number; price: number }[] = [];
-    
+
     menuItems.forEach((menuItem) => {
       const itemLower = menuItem.name.toLowerCase().trim();
       let matched = false;
@@ -334,7 +334,7 @@ function DetailPanel({
             qty = parseInt(matchAfter[1], 10);
           }
         }
-        
+
         if (!detected.some(d => d.item === menuItem.name)) {
           detected.push({
             item: menuItem.name,
@@ -362,7 +362,7 @@ function DetailPanel({
       const qty = parseInt(match[1], 10);
       const unit = match[2] || '';
       const rawItem = match[3].trim();
-      
+
       const words = rawItem.split(/\s+/);
       const cleanWords = [];
       for (const word of words) {
@@ -373,12 +373,12 @@ function DetailPanel({
         cleanWords.push(word);
       }
       const cleanItem = cleanWords.join(' ').trim();
-      
+
       if (cleanItem) {
         const finalName = unit ? `${cleanItem} (${unit})` : cleanItem;
         const alreadyDetected = detected.some(
-          d => d.item.toLowerCase().includes(cleanItem.toLowerCase()) || 
-               cleanItem.toLowerCase().includes(d.item.toLowerCase())
+          d => d.item.toLowerCase().includes(cleanItem.toLowerCase()) ||
+            cleanItem.toLowerCase().includes(d.item.toLowerCase())
         );
         if (!alreadyDetected) {
           detected.push({
@@ -1187,7 +1187,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
       (call.transcript || "")
     ).toLowerCase();
     const detected: { item: string; quantity: number; price: number }[] = [];
-    
+
     menuItems.forEach((menuItem) => {
       const itemLower = menuItem.name.toLowerCase().trim();
       let matched = false;
@@ -1237,7 +1237,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
             qty = parseInt(matchAfter[1], 10);
           }
         }
-        
+
         if (!detected.some(d => d.item === menuItem.name)) {
           detected.push({
             item: menuItem.name,
@@ -1265,7 +1265,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
       const qty = parseInt(match[1], 10);
       const unit = match[2] || '';
       const rawItem = match[3].trim();
-      
+
       const words = rawItem.split(/\s+/);
       const cleanWords = [];
       for (const word of words) {
@@ -1276,12 +1276,12 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
         cleanWords.push(word);
       }
       const cleanItem = cleanWords.join(' ').trim();
-      
+
       if (cleanItem) {
         const finalName = unit ? `${cleanItem} (${unit})` : cleanItem;
         const alreadyDetected = detected.some(
-          d => d.item.toLowerCase().includes(cleanItem.toLowerCase()) || 
-               cleanItem.toLowerCase().includes(d.item.toLowerCase())
+          d => d.item.toLowerCase().includes(cleanItem.toLowerCase()) ||
+            cleanItem.toLowerCase().includes(d.item.toLowerCase())
         );
         if (!alreadyDetected) {
           detected.push({
@@ -1292,7 +1292,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
         }
       }
     }
-    
+
     setSelectedItems(detected);
   }, [call.id, call.call_summary, call.order_items, call.transcript, menuItems]);
 
@@ -1300,7 +1300,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
     if (!newItemName) return;
     const menuItem = menuItems.find(i => i.name === newItemName);
     const price = menuItem ? menuItem.price : 0;
-    
+
     const existingIndex = selectedItems.findIndex(i => i.item === newItemName);
     if (existingIndex > -1) {
       const updated = [...selectedItems];
@@ -1331,7 +1331,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
       toast.error("Please add at least one item to the order.");
       return;
     }
-    
+
     setSubmitting(true);
     try {
       const payload = {
@@ -1342,7 +1342,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
         delivery_address: orderType.toLowerCase() === "delivery" ? deliveryAddress : "",
         total_amount: totalAmount
       };
-      
+
       await confirmCallOrderApi(call.call_id, payload);
       toast.success("Order confirmed and synced to Clover POS!");
       onSuccess();
@@ -1357,7 +1357,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(15, 15, 26, 0.45)", backdropFilter: "blur(4px)", padding: "16px" }}>
       <div style={{ background: C.card, borderRadius: 16, boxShadow: "0 20px 50px rgba(0,0,0,0.15)", width: "100%", maxWidth: 640, display: "flex", flexDirection: "column", maxHeight: "90vh", overflow: "hidden" }}>
-        
+
         {/* Header */}
         <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -1371,7 +1371,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
 
         {/* Scrollable Content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-          
+
           {/* AI Reference Box */}
           <div style={{ background: C.goldBg, border: `1px solid ${C.goldBdr}`, borderRadius: 12, padding: "12px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
@@ -1389,22 +1389,22 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <div>
               <label style={{ display: "block", fontFamily: "Sora, sans-serif", fontSize: "0.7rem", fontWeight: 700, color: C.textSub, marginBottom: 5 }}>Customer Name</label>
-              <input 
-                type="text" 
-                value={customerName} 
-                onChange={(e) => setCustomerName(e.target.value)} 
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
                 required
-                style={{ width: "100%", boxSizing: "border-box", fontFamily: "Sora, sans-serif", fontSize: "0.78rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text }} 
+                style={{ width: "100%", boxSizing: "border-box", fontFamily: "Sora, sans-serif", fontSize: "0.78rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text }}
               />
             </div>
             <div>
               <label style={{ display: "block", fontFamily: "Sora, sans-serif", fontSize: "0.7rem", fontWeight: 700, color: C.textSub, marginBottom: 5 }}>Customer Phone</label>
-              <input 
-                type="text" 
-                value={customerPhone} 
-                onChange={(e) => setCustomerPhone(e.target.value)} 
+              <input
+                type="text"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
                 required
-                style={{ width: "100%", boxSizing: "border-box", fontFamily: "Sora, sans-serif", fontSize: "0.78rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text }} 
+                style={{ width: "100%", boxSizing: "border-box", fontFamily: "Sora, sans-serif", fontSize: "0.78rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text }}
               />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
@@ -1434,13 +1434,13 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
             {orderType.toLowerCase() === "delivery" && (
               <div style={{ gridColumn: "1 / -1" }}>
                 <label style={{ display: "block", fontFamily: "Sora, sans-serif", fontSize: "0.7rem", fontWeight: 700, color: C.textSub, marginBottom: 5 }}>Delivery Address</label>
-                <input 
-                  type="text" 
-                  value={deliveryAddress} 
-                  onChange={(e) => setDeliveryAddress(e.target.value)} 
+                <input
+                  type="text"
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
                   required
                   placeholder="Street, City, Zip Code..."
-                  style={{ width: "100%", boxSizing: "border-box", fontFamily: "Sora, sans-serif", fontSize: "0.78rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text }} 
+                  style={{ width: "100%", boxSizing: "border-box", fontFamily: "Sora, sans-serif", fontSize: "0.78rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 12px", color: C.text }}
                 />
               </div>
             )}
@@ -1449,7 +1449,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
           {/* Product Selector Section */}
           <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
             <h3 style={{ fontFamily: "Sora, sans-serif", fontSize: "0.8rem", fontWeight: 800, color: C.text, margin: "0 0 10px 0" }}>Add Order Items</h3>
-            
+
             <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
               <div style={{ flex: 1 }}>
                 <label style={{ display: "block", fontFamily: "Sora, sans-serif", fontSize: "0.7rem", fontWeight: 700, color: C.textSub, marginBottom: 5 }}>Select Product</label>
@@ -1520,7 +1520,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
                   {selectedItems.map((item, idx) => (
                     <div key={idx} style={{ padding: "10px 14px", borderBottom: idx === selectedItems.length - 1 ? "none" : `1px solid ${C.borderFaint}`, display: "grid", gridTemplateColumns: "1fr 70px 70px 70px 30px", alignItems: "center", gap: 8 }}>
                       <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.item}</span>
-                      
+
                       <div style={{ display: "flex", justifyContent: "center" }}>
                         <input
                           type="number"
@@ -1530,10 +1530,10 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
                           style={{ width: 48, textAlign: "center", fontFamily: "Sora, sans-serif", fontSize: "0.72rem", background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 6, padding: "3px 4px", color: C.text }}
                         />
                       </div>
-                      
+
                       <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.72rem", color: C.textSub, textAlign: "right" }}>${item.price.toFixed(2)}</span>
                       <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.green, textAlign: "right" }}>${(item.price * item.quantity).toFixed(2)}</span>
-                      
+
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(idx)}
@@ -1544,7 +1544,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }: ReviewOrderMo
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Total row */}
                 <div style={{ padding: "12px 14px", background: "#FAFBFD", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.71rem", color: C.textMuted }}>Total Amount</span>
