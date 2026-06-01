@@ -1,9 +1,6 @@
-# ==============================================================================
 # USER ACCOUNT & SYSTEM AUTHENTICATION SERVICE
-# ==============================================================================
 # This module implements the logical business flows for user registration,
 # logins, token renewals, and secure password reset operations.
-# ==============================================================================
 
 import os
 import hashlib

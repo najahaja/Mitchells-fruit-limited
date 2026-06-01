@@ -1,10 +1,7 @@
-# ==============================================================================
 # DATABASE CONFIGURATION & SCHEMAS (SQLAlchemy ORM Models)
-# ==============================================================================
 # This file sets up our database connection engine and defines the tables
 # (schemas) using SQLAlchemy's modern ORM (Object-Relational Mapping) features.
 # It also implements automatic schema initialization and DDL migrations.
-# ==============================================================================
 
 import os
 import uuid

@@ -1,10 +1,7 @@
-# ==============================================================================
 # RETELL AI VOICE AGENT INTEGRATION SERVICE
-# ==============================================================================
 # This module implements the integration client with the Retell AI REST API.
 # It manages agent configurations, conversational flow charts, prompt injections,
 # and verifies HMAC call log webhooks signatures.
-# ==============================================================================
 
 import os
 import hashlib

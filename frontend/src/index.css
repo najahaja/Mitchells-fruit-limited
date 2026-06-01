@@ -18,8 +18,7 @@ html, body {
   display: block;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   VAXIS DESIGN TOKENS & RESPONSIVE STANDARD
+   Mitchells DESIGN TOKENS & RESPONSIVE STANDARD
    Breakpoints: Mobile ≤ 639px | Tablet 640–1023px | Desktop ≥ 1024px
    ───────────────────────────────────────────────────────────────────────── */
 
@@ -39,10 +38,8 @@ html, body {
   --vx-sec-h: clamp(20px, 5vw, 60px);
 }
 
-/* ── Responsive section wrapper ── */
 .vx-section { padding: var(--vx-sec-v) var(--vx-sec-h); }
 
-/* ── Responsive bento grid (FeaturesSection) ── */
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -69,7 +66,6 @@ html, body {
   .bento-2col, .bento-3col { grid-template-columns: 1fr; gap: 20px; }
 }
 
-/* ── POS integrations grid ── */
 .pos-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -83,7 +79,6 @@ html, body {
   .pos-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
-/* ── Why Vaxis 2-col grid ── */
 .why-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -94,7 +89,6 @@ html, body {
   .why-grid { grid-template-columns: 1fr; gap: 48px; }
 }
 
-/* ── Phone mockup container ── */
 .wv-phone-shell {
   width: 380px;
   max-width: 100%;

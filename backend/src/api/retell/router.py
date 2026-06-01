@@ -1,10 +1,7 @@
-# ==============================================================================
 # ROUTER: RETELL AI INTEGRATIONS & OPERATIONS
-# ==============================================================================
 # This module orchestrates all API endpoints relating to the Retell AI Voice
 # Agent. It serves as the primary webhook destination for Retell callbacks,
 # handles B2B inquiries logging, drafts/matches orders, and manages Clover POS mappings.
-# ==============================================================================
 
 import os
 from datetime import datetime, date, timezone
@@ -784,7 +781,6 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
     call_data = event.get("call", {})
     call_id = call_data.get("call_id", "")
     
-    # ==================== CASE A: CALL ENDED ====================
     if event_type == "call_ended":
         from_number = call_data.get("from_number", "")
         direction = call_data.get("direction", "inbound")
@@ -917,7 +913,6 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 )
                 await update_call_log(db, call_id, order_booked=True)
             
-    # ==================== CASE B: CALL ANALYZED ====================
     elif event_type == "call_analyzed":
         analysis = call_data.get("call_analysis")
         if not isinstance(analysis, dict):

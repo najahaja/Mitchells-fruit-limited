@@ -1,10 +1,7 @@
-# ==============================================================================
 # CLOVER POS INTEGRATION SERVICE
-# ==============================================================================
 # This module implements the integration client with Clover POS Merchant APIs.
 # It handles inventory downloads, atomic order creation, and physical
 # ticket printing events for Mitchell's sales orders.
-# ==============================================================================
 
 import logging
 import os

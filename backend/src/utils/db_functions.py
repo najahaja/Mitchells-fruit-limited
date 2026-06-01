@@ -1,10 +1,7 @@
-# ==============================================================================
 # DATABASE OPERATION FUNCTIONS (CRUD & Core Helpers)
-# ==============================================================================
 # This module implements all database queries and transactions (Create, Read,
 # Update, Delete) using SQLAlchemy's asynchronous interface.
 # These functions decouple raw database logic from the API routers.
-# ==============================================================================
 
 import hashlib
 import random
@@ -25,9 +22,7 @@ from src.utils.db import (
 )
 
 
-# ------------------------------------------------------------------------------
 # 1. USER AUTHENTICATION QUERIES
-# ------------------------------------------------------------------------------
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     """
@@ -98,9 +93,7 @@ async def update_password(db: AsyncSession, user_id: str, hashed_password: str) 
     await db.commit()
 
 
-# ------------------------------------------------------------------------------
 # 2. CALLER & CUSTOMER HISTORY QUERIES
-# ------------------------------------------------------------------------------
 
 async def get_caller_by_phone(db: AsyncSession, phone_number: str) -> Caller | None:
     """
@@ -141,9 +134,7 @@ async def update_caller_last_called(db: AsyncSession, phone_number: str) -> None
     await db.commit()
 
 
-# ------------------------------------------------------------------------------
 # 3. CALL LOGGING & DIALOGUE METRICS
-# ------------------------------------------------------------------------------
 
 async def create_call_log(
     db: AsyncSession,
@@ -245,9 +236,7 @@ async def get_combined_stats(db: AsyncSession) -> dict:
     }
 
 
-# ------------------------------------------------------------------------------
 # 4. AGENT VOICE & BUSINESS SETTINGS
-# ------------------------------------------------------------------------------
 
 async def get_agent_settings(db: AsyncSession) -> AgentSettings:
     """
@@ -277,9 +266,7 @@ async def update_agent_settings(db: AsyncSession, **kwargs) -> AgentSettings:
     return settings
 
 
-# ------------------------------------------------------------------------------
 # 5. INVENTORY & CATEGORIES CRUD
-# ------------------------------------------------------------------------------
 
 async def create_category(
     db: AsyncSession, name: str, description: str | None, sort_order: int
@@ -336,9 +323,7 @@ async def delete_category(db: AsyncSession, category_id: str) -> None:
     await db.commit()
 
 
-# ------------------------------------------------------------------------------
 # 6. MENU PRODUCTS CRUD
-# ------------------------------------------------------------------------------
 
 async def create_item(
     db: AsyncSession,
@@ -416,9 +401,7 @@ async def delete_item(db: AsyncSession, item_id: str) -> None:
     await db.commit()
 
 
-# ------------------------------------------------------------------------------
 # 7. PROMOTIONAL SPECIALS CRUD
-# ------------------------------------------------------------------------------
 
 async def create_special(
     db: AsyncSession,
@@ -498,9 +481,7 @@ async def delete_special(db: AsyncSession, special_id: str) -> None:
     await db.commit()
 
 
-# ------------------------------------------------------------------------------
 # 8. CONVERSATIONAL GRAPH HELPER: MENU TEXT SERIALIZER
-# ------------------------------------------------------------------------------
 
 async def build_menu_text(db: AsyncSession) -> str:
     """
@@ -555,9 +536,7 @@ async def build_menu_text(db: AsyncSession) -> str:
     return "\n".join(lines)
 
 
-# ------------------------------------------------------------------------------
 # 9. SALES ORDER PROCESSING
-# ------------------------------------------------------------------------------
 
 async def create_order(
     db: AsyncSession,
@@ -979,9 +958,7 @@ async def get_sentiment_breakdown(db: AsyncSession, days: int = 7) -> dict:
     return {r.user_sentiment: r.count for r in rows}
 
 
-# ------------------------------------------------------------------------------
 # 10. CLOVER CLOUD MAPPING UTILITIES
-# ------------------------------------------------------------------------------
 
 async def get_clover_item_map(db: AsyncSession) -> dict[str, str]:
     """
@@ -1072,9 +1049,7 @@ async def get_menu_items_prices(db: AsyncSession, item_names: list[str]) -> dict
     return {row[0].lower(): row[1] for row in result.all()}
 
 
-# ------------------------------------------------------------------------------
 # 11. CLOVER SYNC IMPLEMENTATION HELPERS
-# ------------------------------------------------------------------------------
 
 # Filter out internal/shipping/coupon items from menu syncs
 CLOVER_ITEM_SKIP_PREFIXES = ("print", "gift card", "fb redeem", "waiver")
@@ -1218,9 +1193,7 @@ async def delete_menu_item_by_clover_id(db: AsyncSession, clover_item_id: str) -
     await db.commit()
 
 
-# ------------------------------------------------------------------------------
 # 12. NATURAL LANGUAGE PROCESSING (NLP) TRANSCRIPT REGEX PARSER
-# ------------------------------------------------------------------------------
 
 async def auto_extract_order_items(
     db: AsyncSession,

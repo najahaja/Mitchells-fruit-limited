@@ -1,10 +1,7 @@
-# ==============================================================================
 # MITCHELL'S SALES AGENT API - MAIN ENTRY POINT
-# ==============================================================================
 # This file initializes the FastAPI application, sets up Cross-Origin Resource
 # Sharing (CORS) rules, mounts various API routers, and manages the application
 # lifecycle (startup/shutdown tasks) including the Clover database sync loop.
-# ==============================================================================
 
 import asyncio
 import logging
@@ -84,7 +81,6 @@ async def lifespan(app: FastAPI):
     FastAPI calls this context manager on app initialization (before accepting traffic)
     and on app termination (when stopping the server process).
     """
-    # ------------------ STARTUP PHASE ------------------
     # 1. Ensure the PostgreSQL tables exist and run migrations
     await init_db()
     
@@ -93,7 +89,6 @@ async def lifespan(app: FastAPI):
     
     yield  # Server runs and handles requests here...
     
-    # ------------------ SHUTDOWN PHASE ------------------
     # Cancel the background task when the server shuts down to prevent memory leaks
     sync_task.cancel()
     try:

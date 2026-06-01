@@ -1,10 +1,7 @@
-# ==============================================================================
 # ROUTER: USER AUTHENTICATION & SESSIONS
-# ==============================================================================
 # This module defines the REST API routes for authentication.
 # It validates request payloads using Pydantic, calls the auth service layer,
 # and returns structured login tokens or confirmation messages.
-# ==============================================================================
 
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -19,9 +16,7 @@ from src.services import auth_service
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-# ------------------------------------------------------------------------------
 # PYDANTIC SCHEMAS (Request & Response validation models)
-# ------------------------------------------------------------------------------
 
 class RegisterRequest(BaseModel):
     """Payload to create a new admin account."""
@@ -96,9 +91,7 @@ class MeResponse(BaseModel):
     created_at: datetime
 
 
-# ------------------------------------------------------------------------------
 # API ENDPOINT ROUTE HANDLERS
-# ------------------------------------------------------------------------------
 
 @router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
