@@ -1205,7 +1205,7 @@ function SettingsPage() {
           <p style={{ margin: 0, fontFamily: C.font, fontSize: ".84rem", fontWeight: 800, color: C.text }}>Integrations are in development</p>
           <p style={{ margin: "2px 0 0", fontFamily: C.font, fontSize: ".72rem", color: C.textMuted, lineHeight: 1.5 }}>OAuth connections and API key management coming soon.</p>
         </div>
-        <span style={{ fontFamily: C.font, fontSize: ".66rem", fontWeight: 700, padding: "3px 9px", borderRadius: 100, background: C.purpleLight, color: C.purpleAlt, flexShrink: 0 }}>Q3 2025</span>
+        <span style={{ fontFamily: C.font, fontSize: ".66rem", fontWeight: 700, padding: "3px 9px", borderRadius: 100, background: C.purpleLight, color: C.purpleAlt, flexShrink: 0 }}>Q3 2026</span>
       </div>
 
       <Card faded>

@@ -1859,32 +1859,35 @@ function CallsOrders() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-
-            
             <span style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.textGhost, fontFamily: "'Sora',sans-serif", marginRight: 2 }}>Date</span>
 
-            
-            <div style={{ display: "flex", gap: 3, background: "rgba(0,0,0,.035)", borderRadius: 100, padding: "3px" }}>
-              {["today", "7d", "30d", "all"].map((d) => <button
-    key={d}
-    className="co-period"
-    onClick={() => setDateFilter(d)}
-    style={{
-      fontFamily: "'Sora',sans-serif",
-      fontSize: ".67rem",
-      fontWeight: 700,
-      padding: "4px 12px",
-      borderRadius: 100,
-      border: "none",
-      cursor: "pointer",
-      background: dateFilter === d ? "#fff" : "transparent",
-      color: dateFilter === d ? C.purple : C.textMuted,
-      boxShadow: dateFilter === d ? "0 1px 6px rgba(0,0,0,.10)" : "none",
-      whiteSpace: "nowrap"
-    }}
-  >
-                  {d === "today" ? "Today" : d === "7d" ? "7 Days" : d === "30d" ? "Month" : "All"}
-                </button>)}
+            <div style={{ position: "relative", display: "inline-block" }}>
+              <select
+                className="co-select"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                style={{
+                  fontFamily: "'Sora',sans-serif",
+                  fontSize: ".67rem",
+                  fontWeight: 700,
+                  background: "#fff",
+                  border: `1.5px solid ${dateFilter !== "all" ? C.purpleBdr : C.border}`,
+                  borderRadius: 100,
+                  padding: "4px 26px 4px 12px",
+                  color: dateFilter !== "all" ? C.purple : C.textSub,
+                  cursor: "pointer",
+                  appearance: "none",
+                  outline: "none",
+                  boxShadow: dateFilter !== "all" ? `0 1px 8px ${C.purpleBdr}` : "none",
+                  transition: "all .15s"
+                }}
+              >
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="7d">7 Days</option>
+                <option value="30d">1 Month</option>
+              </select>
+              <ChevronDown size={10} style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", color: dateFilter !== "all" ? C.purple : C.textMuted, pointerEvents: "none" }} />
             </div>
 
             
