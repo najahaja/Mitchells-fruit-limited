@@ -36,6 +36,11 @@ class ContactCreate(BaseModel):
     email: str | None = None
     company: str | None = None
     metadata: dict | None = None
+    shop_name: str | None = None
+    owner_name: str | None = None
+    customer_city: str | None = None
+    last_order: str | None = None
+    customer_type: str | None = None
 
 
 class ContactResponse(BaseModel):
@@ -60,6 +65,11 @@ class ContactImportItem(BaseModel):
     email: str | None = None
     company: str | None = None
     metadata: dict | None = None
+    shop_name: str | None = None
+    owner_name: str | None = None
+    customer_city: str | None = None
+    last_order: str | None = None
+    customer_type: str | None = None
 
 
 class ContactImportRequest(BaseModel):

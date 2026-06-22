@@ -166,6 +166,11 @@ async def add_contact(
         body.email,
         body.company,
         body.metadata,
+        body.shop_name,
+        body.owner_name,
+        body.customer_city,
+        body.last_order,
+        body.customer_type,
     )
     return _contact_response(contact)
 

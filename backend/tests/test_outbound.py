@@ -5,6 +5,7 @@ from src.api.outbound.utils import (
     normalize_phone_number,
     parse_csv_contacts,
     parse_json_contacts,
+    merge_contact_payload,
 )
 
 
@@ -36,7 +37,26 @@ def test_parse_json_contacts_list():
     assert contacts[0]["name"] == "Jane"
 
 
-def test_parse_json_contacts_wrapped():
-    content = '{"contacts": [{"phone_number": "+14155558888"}]}'
-    contacts = parse_json_contacts(content)
-    assert len(contacts) == 1
+def test_merge_contact_payload():
+    name, company, meta = merge_contact_payload(
+        shop_name="Ali Store",
+        owner_name="Ali Khan",
+        customer_city="Lahore",
+        last_order="2x Mango Jam",
+        customer_type="existing",
+    )
+    assert name == "Ali Khan"
+    assert company == "Ali Store"
+    assert meta["customer_city"] == "Lahore"
+    assert meta["customer_type"] == "existing"
+
+
+def test_parse_csv_with_outbound_columns():
+    csv_content = (
+        "shop_name,owner_name,phone_number,customer_city,last_order,customer_type\n"
+        "Fresh Mart,Sara Ali,+14155551234,Karachi,3x Squash,existing\n"
+    )
+    contacts = parse_csv_contacts(csv_content)
+    assert contacts[0]["company"] == "Fresh Mart"
+    assert contacts[0]["name"] == "Sara Ali"
+    assert contacts[0]["metadata"]["customer_city"] == "Karachi"

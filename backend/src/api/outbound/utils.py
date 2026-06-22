@@ -7,6 +7,68 @@ E164_PATTERN = re.compile(r"^\+[1-9]\d{1,14}$")
 
 CAMPAIGN_STATUSES = {"draft", "active", "paused", "completed"}
 CONTACT_STATUSES = {"pending", "calling", "completed", "failed"}
+CUSTOMER_TYPES = {"new", "existing"}
+
+OUTBOUND_META_KEYS = (
+    "shop_name",
+    "owner_name",
+    "customer_city",
+    "last_order",
+    "customer_type",
+)
+
+
+def format_last_order(order) -> str:
+    if not order:
+        return ""
+    items = order.order_items
+    if isinstance(items, list):
+        parts = []
+        for item in items:
+            if isinstance(item, dict):
+                name = (
+                    item.get("name")
+                    or item.get("item_name")
+                    or str(item)
+                )
+                qty = item.get("quantity") or item.get("qty") or 1
+                parts.append(f"{qty}x {name}")
+            else:
+                parts.append(str(item))
+        return ", ".join(parts)
+    if items:
+        return str(items)
+    return ""
+
+
+def merge_contact_payload(
+    name: str | None = None,
+    company: str | None = None,
+    metadata: dict | None = None,
+    shop_name: str | None = None,
+    owner_name: str | None = None,
+    customer_city: str | None = None,
+    last_order: str | None = None,
+    customer_type: str | None = None,
+) -> tuple[str | None, str | None, dict | None]:
+    meta = dict(metadata or {})
+    if shop_name:
+        meta["shop_name"] = shop_name.strip()
+    if owner_name:
+        meta["owner_name"] = owner_name.strip()
+    if customer_city:
+        meta["customer_city"] = customer_city.strip()
+    if last_order:
+        meta["last_order"] = last_order.strip()
+    if customer_type:
+        ct = customer_type.strip().lower()
+        if ct in CUSTOMER_TYPES:
+            meta["customer_type"] = ct
+    resolved_name = (owner_name or name or meta.get("owner_name") or "").strip() or None
+    resolved_company = (
+        shop_name or company or meta.get("shop_name") or ""
+    ).strip() or None
+    return resolved_name, resolved_company, meta or None
 
 
 def normalize_phone_number(phone: str) -> str:
@@ -38,20 +100,43 @@ def parse_csv_contacts(content: str) -> list[dict]:
     phone_key = field_map.get("phone_number") or field_map.get("phone")
     if not phone_key:
         raise ValueError("CSV must include phone_number or phone column")
+
+    def col(*keys):
+        for key in keys:
+            if key in field_map:
+                return field_map[key]
+        return None
+
+    name_key = col("owner_name", "name")
+    company_key = col("shop_name", "company")
+    email_key = col("email")
+    city_key = col("customer_city", "city")
+    last_order_key = col("last_order")
+    type_key = col("customer_type")
+
     contacts = []
     for row in reader:
         phone = (row.get(phone_key) or "").strip()
         if not phone:
             continue
-        name_key = field_map.get("name")
-        email_key = field_map.get("email")
-        company_key = field_map.get("company")
+        meta = {}
+        if city_key and row.get(city_key):
+            meta["customer_city"] = row[city_key].strip()
+        if last_order_key and row.get(last_order_key):
+            meta["last_order"] = row[last_order_key].strip()
+        if type_key and row.get(type_key):
+            meta["customer_type"] = row[type_key].strip().lower()
         contacts.append({
             "name": (row.get(name_key) or "").strip() or None if name_key else None,
             "phone_number": phone,
             "email": (row.get(email_key) or "").strip() or None if email_key else None,
             "company": (row.get(company_key) or "").strip() or None if company_key else None,
-            "metadata": None,
+            "metadata": meta or None,
+            "shop_name": (row.get(company_key) or "").strip() or None if company_key else None,
+            "owner_name": (row.get(name_key) or "").strip() or None if name_key else None,
+            "customer_city": meta.get("customer_city"),
+            "last_order": meta.get("last_order"),
+            "customer_type": meta.get("customer_type"),
         })
     return contacts
 
@@ -70,10 +155,15 @@ def parse_json_contacts(content: str) -> list[dict]:
         if not phone:
             raise ValueError("Each contact must include phone_number")
         contacts.append({
-            "name": item.get("name"),
+            "name": item.get("owner_name") or item.get("name"),
             "phone_number": phone,
             "email": item.get("email"),
-            "company": item.get("company"),
+            "company": item.get("shop_name") or item.get("company"),
             "metadata": item.get("metadata"),
+            "shop_name": item.get("shop_name"),
+            "owner_name": item.get("owner_name") or item.get("name"),
+            "customer_city": item.get("customer_city"),
+            "last_order": item.get("last_order"),
+            "customer_type": item.get("customer_type"),
         })
     return contacts

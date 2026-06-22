@@ -11,6 +11,13 @@ from src.api.outbound import repository as repo
 from src.api.outbound.utils import (
     validate_phone_number,
     CAMPAIGN_STATUSES,
+    merge_contact_payload,
+    format_last_order,
+)
+from src.utils.db_functions import (
+    get_caller_by_phone,
+    get_agent_settings,
+    build_menu_text,
 )
 
 _logger = logging.getLogger("outbound_calling")
@@ -58,6 +65,11 @@ class OutboundCallingService:
         email: str | None = None,
         company: str | None = None,
         metadata: dict | None = None,
+        shop_name: str | None = None,
+        owner_name: str | None = None,
+        customer_city: str | None = None,
+        last_order: str | None = None,
+        customer_type: str | None = None,
     ):
         campaign = await repo.get_campaign(db, campaign_id)
         if not campaign:
@@ -72,14 +84,24 @@ class OutboundCallingService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(exc),
             )
+        resolved_name, resolved_company, resolved_meta = merge_contact_payload(
+            name=name,
+            company=company,
+            metadata=metadata,
+            shop_name=shop_name,
+            owner_name=owner_name,
+            customer_city=customer_city,
+            last_order=last_order,
+            customer_type=customer_type,
+        )
         return await repo.create_contact(
             db,
             campaign_id,
             normalized,
-            name,
+            resolved_name,
             email,
-            company,
-            metadata,
+            resolved_company,
+            resolved_meta,
         )
 
     async def bulk_import_contacts(
@@ -99,14 +121,26 @@ class OutboundCallingService:
         for idx, item in enumerate(contacts):
             try:
                 normalized = validate_phone_number(item["phone_number"])
+                resolved_name, resolved_company, resolved_meta = (
+                    merge_contact_payload(
+                        name=item.get("name"),
+                        company=item.get("company"),
+                        metadata=item.get("metadata"),
+                        shop_name=item.get("shop_name"),
+                        owner_name=item.get("owner_name"),
+                        customer_city=item.get("customer_city"),
+                        last_order=item.get("last_order"),
+                        customer_type=item.get("customer_type"),
+                    )
+                )
                 contact = await repo.create_contact(
                     db,
                     campaign_id,
                     normalized,
-                    item.get("name"),
+                    resolved_name,
                     item.get("email"),
-                    item.get("company"),
-                    item.get("metadata"),
+                    resolved_company,
+                    resolved_meta,
                 )
                 created.append(contact)
             except (ValueError, KeyError) as exc:
@@ -203,14 +237,50 @@ class OutboundCallingService:
                         db, campaign, status="completed"
                     )
 
+    async def _build_dynamic_variables(self, db, contact) -> dict[str, str]:
+        meta = contact.contact_metadata or {}
+        caller = await get_caller_by_phone(db, contact.phone_number)
+        settings = await get_agent_settings(db)
+        catalogue = await build_menu_text(db)
+
+        last_order = (meta.get("last_order") or "").strip()
+        if not last_order:
+            order = await repo.get_last_order_by_phone(
+                db, contact.phone_number
+            )
+            last_order = format_last_order(order)
+
+        customer_type = (meta.get("customer_type") or "").strip().lower()
+        if customer_type not in ("new", "existing"):
+            order = await repo.get_last_order_by_phone(
+                db, contact.phone_number
+            )
+            if caller and caller.last_called_at:
+                customer_type = "existing"
+            elif order:
+                customer_type = "existing"
+            else:
+                customer_type = "new"
+
+        return {
+            "customer_type": customer_type,
+            "shop_name": (
+                meta.get("shop_name") or contact.company or ""
+            ),
+            "owner_name": (
+                meta.get("owner_name") or contact.name or ""
+            ),
+            "customer_city": meta.get("customer_city") or "",
+            "customer_phone": contact.phone_number,
+            "last_order": last_order,
+            "product_catalogue": catalogue,
+            "company_info": settings.restaurant_info or "",
+        }
+
     async def _dial_contact(self, db, campaign, contact):
         await repo.update_contact_status(db, contact.id, "calling")
         agent_id = campaign.agent_id
-        dynamic_vars = {
-            "customer_name": contact.name or "",
-            "customer_phone": contact.phone_number,
-            "company_name": contact.company or "",
-        }
+        dynamic_vars = await self._build_dynamic_variables(db, contact)
         try:
             retell_response = await retell_service.create_phone_call(
                 to_number=contact.phone_number,

@@ -4,7 +4,20 @@ from sqlalchemy import select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.utils.db import OutboundCampaign, OutboundContact, OutboundCall
+from src.utils.db import OutboundCampaign, OutboundContact, OutboundCall, Order
+
+
+async def get_last_order_by_phone(
+    db: AsyncSession,
+    phone_number: str,
+) -> Order | None:
+    result = await db.execute(
+        select(Order)
+        .where(Order.caller_phone == phone_number)
+        .order_by(Order.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
 
 
 async def create_campaign(
