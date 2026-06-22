@@ -5,6 +5,7 @@ import {
   ChartBarIncreasing,
   ChartNoAxesColumnIncreasing,
   PhoneCall,
+  PhoneOutgoing,
   Settings,
   SquareMenu,
   LogOut,
@@ -105,7 +106,8 @@ const SIDEBAR_CSS = `
 const NAV_ITEMS = [
   { icon: <ChartNoAxesColumnIncreasing size={16} />, label: "Overview", to: "/dashboard", end: true },
   { icon: <Bot size={16} />, label: "Agents", to: "/dashboard/agents" },
-  { icon: <PhoneCall size={16} />, label: "Calls & Orders", to: "/dashboard/calls" },
+  { icon: <PhoneCall size={16} />, label: "Inbound Calls", to: "/dashboard/calls" },
+  { icon: <PhoneOutgoing size={16} />, label: "Outbound Calls", to: "/dashboard/calling/outbound" },
   { icon: <AlertCircle size={16} />, label: "Complaints", to: "/dashboard/complaints" },
   { icon: <SquareMenu size={16} />, label: "Products", to: "/dashboard/menu" },
   { icon: <ChartBarIncreasing size={16} />, label: "Reports", to: "/dashboard/report" },

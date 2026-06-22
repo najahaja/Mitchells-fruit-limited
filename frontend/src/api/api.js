@@ -135,6 +135,58 @@ const getComplaintsApi = async () => {
   const res = await axiosInstance.get("/retell/complaints");
   return res.data;
 };
+const getOutboundStatsApi = async () =>
+  (await axiosInstance.get("/outbound/stats")).data;
+const getOutboundCampaignsApi = async (skip = 0, limit = 20, search = "") => {
+  const params = new URLSearchParams({ skip, limit });
+  if (search) params.append("search", search);
+  return (await axiosInstance.get(`/outbound/campaigns?${params}`)).data;
+};
+const createOutboundCampaignApi = async (data) =>
+  (await axiosInstance.post("/outbound/campaigns", data)).data;
+const getOutboundCampaignApi = async (id) =>
+  (await axiosInstance.get(`/outbound/campaigns/${id}`)).data;
+const updateOutboundCampaignApi = async (id, data) =>
+  (await axiosInstance.put(`/outbound/campaigns/${id}`, data)).data;
+const deleteOutboundCampaignApi = async (id) => {
+  await axiosInstance.delete(`/outbound/campaigns/${id}`);
+};
+const getOutboundCampaignStatsApi = async (id) =>
+  (await axiosInstance.get(`/outbound/campaigns/${id}/stats`)).data;
+const getOutboundContactsApi = async (campaignId) =>
+  (await axiosInstance.get(`/outbound/campaigns/${campaignId}/contacts`)).data;
+const addOutboundContactApi = async (campaignId, data) =>
+  (await axiosInstance.post(`/outbound/campaigns/${campaignId}/contacts`, data)).data;
+const deleteOutboundContactApi = async (contactId) => {
+  await axiosInstance.delete(`/outbound/contacts/${contactId}`);
+};
+const importOutboundContactsApi = async (campaignId, file) => {
+  const form = new FormData();
+  form.append("file", file);
+  return (
+    await axiosInstance.post(
+      `/outbound/campaigns/${campaignId}/contacts/import`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    )
+  ).data;
+};
+const importOutboundContactsJsonApi = async (campaignId, contacts) =>
+  (
+    await axiosInstance.post(
+      `/outbound/campaigns/${campaignId}/contacts/import`,
+      { contacts }
+    )
+  ).data;
+const startOutboundCampaignApi = async (campaignId) =>
+  (await axiosInstance.post(`/outbound/campaigns/${campaignId}/start`)).data;
+const getOutboundCallsApi = async (skip = 0, limit = 50, campaignId) => {
+  const params = new URLSearchParams({ skip, limit });
+  if (campaignId) params.append("campaign_id", campaignId);
+  return (await axiosInstance.get(`/outbound/calls?${params}`)).data;
+};
+const getOutboundCallApi = async (id) =>
+  (await axiosInstance.get(`/outbound/calls/${id}`)).data;
 export {
   activatePromptApi,
   cancelOrderApi,
@@ -157,15 +209,30 @@ export {
   getDashboardStatsApi,
   getItemsByCategoryApi,
   getMenuPreviewApi,
+  getOutboundCallApi,
+  getOutboundCallsApi,
+  getOutboundCampaignApi,
+  getOutboundCampaignsApi,
+  getOutboundCampaignStatsApi,
+  getOutboundContactsApi,
+  getOutboundStatsApi,
   getPromptsApi,
   getReportApi,
   getSettingsApi,
   getSpecialsApi,
   getVoicesApi,
+  importOutboundContactsApi,
+  importOutboundContactsJsonApi,
   loginApi,
   registerApi,
   reprintOrderApi,
   resetPasswordApi,
+  startOutboundCampaignApi,
+  addOutboundContactApi,
+  createOutboundCampaignApi,
+  deleteOutboundCampaignApi,
+  deleteOutboundContactApi,
+  updateOutboundCampaignApi,
   updateCategoryApi,
   updateItemApi,
   updatePromptApi,

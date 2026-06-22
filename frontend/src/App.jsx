@@ -18,6 +18,11 @@ import { Toaster } from "react-hot-toast";
 import Report from "./pages/user/Report";
 import Agents from "./pages/user/Agents";
 import Complaints from "./pages/user/Complaints";
+import OutboundDashboard from "./pages/outbound/OutboundDashboard";
+import CampaignList from "./pages/outbound/CampaignList";
+import CampaignDetail from "./pages/outbound/CampaignDetail";
+import OutboundCalls from "./pages/outbound/OutboundCalls";
+import OutboundCallDetail from "./pages/outbound/OutboundCallDetail";
 function PrivateRoute() {
   const token = localStorage.getItem("token");
   return token ? <Outlet /> : <Navigate to="/signin" replace />;
@@ -62,6 +67,11 @@ const router = createBrowserRouter([
           { index: true, element: <Overview /> },
           { path: "agents", element: <Agents /> },
           { path: "calls", element: <CallsOrders /> },
+          { path: "calling/outbound", element: <OutboundDashboard /> },
+          { path: "calling/outbound/campaigns", element: <CampaignList /> },
+          { path: "calling/outbound/campaigns/:id", element: <CampaignDetail /> },
+          { path: "calling/outbound/calls", element: <OutboundCalls /> },
+          { path: "calling/outbound/calls/:id", element: <OutboundCallDetail /> },
           { path: "complaints", element: <Complaints /> },
           { path: "menu", element: <Menu /> },
           { path: "settings", element: <Settings /> },

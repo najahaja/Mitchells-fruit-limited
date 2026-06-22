@@ -25,6 +25,7 @@ from src.api.retell.router import router as retell_router
 from src.api.settings.router import router as settings_router
 from src.api.menu.router import router as menu_router
 from src.api.prompts.router import router as prompts_router
+from src.api.outbound.router import router as outbound_router
 
 # 2. CORS (Cross-Origin Resource Sharing) CONFIGURATION
 # Allowed origins represents which frontends/websites are allowed to make requests
@@ -117,6 +118,7 @@ app.include_router(retell_router)
 app.include_router(settings_router)
 app.include_router(menu_router)
 app.include_router(prompts_router)
+app.include_router(outbound_router)
 
 
 # 4. HEALTH CHECK ENDPOINT

@@ -53,6 +53,37 @@ async def get_call(call_id: str) -> dict:
         return response.json()
 
 
+async def create_phone_call(
+    to_number: str,
+    from_number: str | None = None,
+    override_agent_id: str | None = None,
+    metadata: dict | None = None,
+    dynamic_variables: dict | None = None,
+) -> dict:
+    from_number = from_number or os.getenv("RETELL_PHONE_NUMBER", "")
+    agent_id = override_agent_id or os.getenv("RETELL_AGENT_ID", "")
+    payload: dict = {
+        "from_number": from_number,
+        "to_number": to_number,
+    }
+    if agent_id:
+        payload["override_agent_id"] = agent_id
+    if metadata:
+        payload["metadata"] = metadata
+    if dynamic_variables:
+        payload["retell_llm_dynamic_variables"] = {
+            k: str(v) for k, v in dynamic_variables.items()
+        }
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{BASE_URL}/v2/create-phone-call",
+            headers=_headers(),
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
 async def get_agent() -> dict:
     """
     Queries Retell details for our configured Voice Agent ID.

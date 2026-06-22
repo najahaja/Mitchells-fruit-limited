@@ -322,6 +322,106 @@ class CallbackRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
+class OutboundCampaign(Base):
+    __tablename__ = "outbound_campaigns"
+
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agent_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[str] = mapped_column(String, default="draft")
+    created_by: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    contacts: Mapped[list["OutboundContact"]] = relationship(
+        "OutboundContact",
+        back_populates="campaign",
+        lazy="selectin",
+    )
+    calls: Mapped[list["OutboundCall"]] = relationship(
+        "OutboundCall",
+        back_populates="campaign",
+        lazy="selectin",
+    )
+
+
+class OutboundContact(Base):
+    __tablename__ = "outbound_contacts"
+
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    campaign_id: Mapped[str] = mapped_column(
+        String, ForeignKey("outbound_campaigns.id"), nullable=False
+    )
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    phone_number: Mapped[str] = mapped_column(String, nullable=False)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    company: Mapped[str | None] = mapped_column(String, nullable=True)
+    contact_metadata: Mapped[dict | None] = mapped_column(
+        "metadata", JSON, nullable=True
+    )
+    status: Mapped[str] = mapped_column(String, default="pending")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    campaign: Mapped["OutboundCampaign"] = relationship(
+        "OutboundCampaign",
+        back_populates="contacts",
+    )
+
+
+class OutboundCall(Base):
+    __tablename__ = "outbound_calls"
+
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    campaign_id: Mapped[str] = mapped_column(
+        String, ForeignKey("outbound_campaigns.id"), nullable=False
+    )
+    contact_id: Mapped[str] = mapped_column(
+        String, ForeignKey("outbound_contacts.id"), nullable=False
+    )
+    retell_call_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
+    phone_number: Mapped[str] = mapped_column(String, nullable=False)
+    call_status: Mapped[str] = mapped_column(String, default="registered")
+    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recording_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    campaign: Mapped["OutboundCampaign"] = relationship(
+        "OutboundCampaign",
+        back_populates="calls",
+    )
+    contact: Mapped["OutboundContact"] = relationship("OutboundContact")
+
+
 # 4. FASTAPI DEPENDENCY YIELDER
 async def get_db():
     """
