@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { formatPKR } from "../../utils/currency";
 import {
   Clock,
   MapPin,
@@ -598,7 +599,7 @@ export default function Overview() {
                 },
                 {
                   label: "AI Revenue",
-                  value: `$${aiRevenue.toFixed(2)}`,
+                  value: formatPKR(aiRevenue),
                   sub: "gross revenue",
                   icon: <DollarSign size={14} />,
                   accent: C.green,
@@ -783,7 +784,7 @@ export default function Overview() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                           {amt != null && (
                             <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".76rem", fontWeight: 700, color: C.green }}>
-                              ${amt.toFixed(2)}
+                              {formatPKR(amt)}
                             </span>
                           )}
                           <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}` }}>

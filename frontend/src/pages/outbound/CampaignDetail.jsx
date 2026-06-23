@@ -5,7 +5,6 @@ import {
   Plus,
   Trash2,
   Upload,
-  Play,
   Phone,
   Loader2,
   RefreshCw,
@@ -18,10 +17,77 @@ import {
   addOutboundContactApi,
   deleteOutboundContactApi,
   importOutboundContactsApi,
-  startOutboundCampaignApi,
   startOutboundCallApi,
 } from "../../api/api";
 import { C, StatusBadge, Btn, spinStyle } from "./outboundStyles";
+
+const CSV_IMPORT_FIELDS = [
+  {
+    column: "phone_number",
+    required: true,
+    aliases: "phone",
+    example: "03475574848",
+    note: "Required. E.164 or local PK format (auto-normalized to +92…)",
+  },
+  {
+    column: "owner_name",
+    required: false,
+    aliases: "name",
+    example: "Ali Khan",
+    note: "Contact / owner name spoken by the agent",
+  },
+  {
+    column: "shop_name",
+    required: false,
+    aliases: "company",
+    example: "Fresh Mart",
+    note: "Business or shop name",
+  },
+  {
+    column: "email",
+    required: false,
+    aliases: null,
+    example: "ali@example.com",
+    note: "Optional email",
+  },
+  {
+    column: "customer_city",
+    required: false,
+    aliases: "city",
+    example: "Lahore",
+    note: "City passed to the agent as dynamic variable",
+  },
+  {
+    column: "last_order",
+    required: false,
+    aliases: null,
+    example: "2x Mango Jam",
+    note: "Previous order summary for returning customers",
+  },
+  {
+    column: "customer_type",
+    required: false,
+    aliases: null,
+    example: "existing",
+    note: "new or existing",
+  },
+];
+
+const CSV_SAMPLE = [
+  "phone_number,owner_name,shop_name,email,customer_city,last_order,customer_type",
+  "03475574848,Ali Khan,Fresh Mart,ali@example.com,Lahore,2x Mango Jam,existing",
+  "03001234567,Sara Ali,City Store,,Karachi,,new",
+].join("\n");
+
+function downloadSampleCsv() {
+  const blob = new Blob([CSV_SAMPLE], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "outbound-contacts-sample.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function CampaignDetail() {
   const { id } = useParams();
@@ -33,7 +99,6 @@ export default function CampaignDetail() {
   const [stats, setStats] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [starting, setStarting] = useState(false);
   const [callingId, setCallingId] = useState(null);
   const [quickPhone, setQuickPhone] = useState("");
   const [importing, setImporting] = useState(false);
@@ -74,10 +139,10 @@ export default function CampaignDetail() {
   }, [fetchAll]);
 
   useEffect(() => {
-    if (showAdd || savingContact || starting || callingId) return undefined;
+    if (showAdd || savingContact || callingId) return undefined;
     const interval = setInterval(() => fetchAll(true), 20000);
     return () => clearInterval(interval);
-  }, [fetchAll, showAdd, savingContact, starting, callingId]);
+  }, [fetchAll, showAdd, savingContact, callingId]);
 
   const apiError = (err, fallback) => {
     const detail = err?.response?.data?.detail ?? err;
@@ -87,7 +152,7 @@ export default function CampaignDetail() {
   };
 
   const callContact = async (contactId) => {
-    if (callingId || starting) return;
+    if (callingId) return;
     setCallingId(contactId);
     try {
       const call = await startOutboundCallApi({ contact_id: contactId });
@@ -102,7 +167,7 @@ export default function CampaignDetail() {
 
   const quickCall = async (e) => {
     e.preventDefault();
-    if (callingId || starting) return;
+    if (callingId) return;
     if (!quickPhone.trim()) {
       toast.error("Enter a phone number");
       return;
@@ -175,20 +240,6 @@ export default function CampaignDetail() {
     }
   };
 
-  const startCampaign = async () => {
-    if (starting || campaign?.status === "completed") return;
-    setStarting(true);
-    try {
-      const result = await startOutboundCampaignApi(id);
-      toast.success(`Started calling ${result.queued_contacts} contacts`);
-      await fetchAll(true);
-    } catch (err) {
-      toast.error(apiError(err, "Failed to start campaign"));
-    } finally {
-      setStarting(false);
-    }
-  };
-
   if (initialLoading) {
     return (
       <div style={{ padding: 60, textAlign: "center" }}>
@@ -220,15 +271,6 @@ export default function CampaignDetail() {
         <Btn variant="secondary" loading={refreshing} onClick={() => fetchAll(false)} style={{ padding: 8 }}>
           <RefreshCw size={14} />
         </Btn>
-        <Btn
-          variant="success"
-          loading={starting}
-          disabled={!stats?.pending || !!callingId}
-          onClick={startCampaign}
-        >
-          <Play size={14} />
-          {starting ? "Starting…" : "Call All Pending"}
-        </Btn>
       </div>
 
       <form
@@ -250,7 +292,7 @@ export default function CampaignDetail() {
           value={quickPhone}
           onChange={(e) => setQuickPhone(e.target.value)}
           placeholder="Phone number to call now (e.g. 03475574848)"
-          disabled={!!callingId || starting}
+          disabled={!!callingId}
           style={{
             flex: 1,
             minWidth: 200,
@@ -296,7 +338,7 @@ export default function CampaignDetail() {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <Btn variant="primary" onClick={() => setShowAdd(true)}>
           <Plus size={14} />
           Add Contact
@@ -305,7 +347,116 @@ export default function CampaignDetail() {
           <Upload size={14} />
           {importing ? "Importing…" : "CSV / JSON Upload"}
         </Btn>
+        <Btn variant="secondary" onClick={downloadSampleCsv}>
+          Download sample CSV
+        </Btn>
         <input ref={fileRef} type="file" accept=".csv,.json" hidden onChange={handleFile} />
+      </div>
+
+      <div
+        style={{
+          background: C.card,
+          border: `1px solid ${C.border}`,
+          borderRadius: 14,
+          padding: "16px 18px",
+          marginBottom: 16,
+        }}
+      >
+        <p
+          style={{
+            margin: "0 0 10px",
+            fontSize: ".82rem",
+            fontWeight: 800,
+            color: C.text,
+          }}
+        >
+          CSV / JSON import format
+        </p>
+        <p style={{ margin: "0 0 12px", fontSize: ".75rem", color: C.textMuted, lineHeight: 1.5 }}>
+          First row must be column headers. Only{" "}
+          <strong style={{ color: C.text }}>phone_number</strong> is required; all other
+          columns are optional but improve personalization on outbound calls.
+        </p>
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: ".75rem",
+            }}
+          >
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                {["Column", "Required", "Also accepts", "Example", "Notes"].map((h) => (
+                  <th
+                    key={h}
+                    style={{
+                      textAlign: "left",
+                      padding: "8px 10px",
+                      fontWeight: 700,
+                      color: C.textMuted,
+                      fontSize: ".68rem",
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {CSV_IMPORT_FIELDS.map((f) => (
+                <tr key={f.column} style={{ borderBottom: `1px solid ${C.borderFaint}` }}>
+                  <td style={{ padding: "8px 10px", fontFamily: "monospace", fontWeight: 700 }}>
+                    {f.column}
+                  </td>
+                  <td style={{ padding: "8px 10px" }}>
+                    {f.required ? (
+                      <span style={{ color: C.red, fontWeight: 700 }}>Yes</span>
+                    ) : (
+                      <span style={{ color: C.textMuted }}>No</span>
+                    )}
+                  </td>
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      fontFamily: "monospace",
+                      color: C.textMuted,
+                    }}
+                  >
+                    {f.aliases || "—"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "8px 10px",
+                      fontFamily: "monospace",
+                      color: C.textSub,
+                    }}
+                  >
+                    {f.example}
+                  </td>
+                  <td style={{ padding: "8px 10px", color: C.textMuted }}>{f.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p
+          style={{
+            margin: "12px 0 0",
+            fontSize: ".72rem",
+            color: C.textMuted,
+            fontFamily: "monospace",
+            background: "#FAFBFD",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: `1px solid ${C.borderFaint}`,
+            overflowX: "auto",
+          }}
+        >
+          {CSV_SAMPLE.split("\n")[0]}
+        </p>
       </div>
 
       <div
@@ -360,8 +511,7 @@ export default function CampaignDetail() {
                         loading={callingId === ct.id}
                         disabled={
                           ct.status === "calling" ||
-                          (!!callingId && callingId !== ct.id) ||
-                          starting
+                          (!!callingId && callingId !== ct.id)
                         }
                         onClick={() => callContact(ct.id)}
                         style={{ padding: "6px 10px" }}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useMemo } from "react";
+import { formatPKR } from "../../utils/currency";
 import {
   Phone,
   ShoppingBag,
@@ -81,10 +82,10 @@ function getOrderRevenue(c) {
   return null;
 }
 const SENTIMENT_MAP = {
-  positive: { label: "Positive", color: C.green, bg: C.greenBg, border: C.greenBdr, emoji: "\u{1F60A}" },
-  neutral: { label: "Neutral", color: C.gold, bg: C.goldBg, border: C.goldBdr, emoji: "\u{1F610}" },
-  negative: { label: "Frustrated", color: C.red, bg: C.redBg, border: C.redBdr, emoji: "\u{1F621}" },
-  frustrated: { label: "Frustrated", color: C.red, bg: C.redBg, border: C.redBdr, emoji: "\u{1F621}" }
+  positive: { label: "Positive", color: C.green, bg: C.greenBg, border: C.greenBdr },
+  neutral: { label: "Neutral", color: C.gold, bg: C.goldBg, border: C.goldBdr },
+  negative: { label: "Frustrated", color: C.red, bg: C.redBg, border: C.redBdr },
+  frustrated: { label: "Frustrated", color: C.red, bg: C.redBg, border: C.redBdr }
 };
 function getSentiment(c) {
   if (c.call_reason && c.call_reason.toLowerCase().includes("complaint")) {
@@ -347,10 +348,10 @@ function DetailPanel({
   }, [extractedItems]);
   const handleForcePrint = async () => {
     if (!call.order_details?.order_id) {
-      toast.error("No synced Clover order found to reprint");
+      toast.error("No synced order found to reprint");
       return;
     }
-    const loadingToast = toast.loading("Sending reprint request to Clover...");
+    const loadingToast = toast.loading("Sending reprint request...");
     try {
       await reprintOrderApi(call.order_details.order_id);
       toast.success("Print command sent to warehouse fulfillment printer", { id: loadingToast });
@@ -360,13 +361,13 @@ function DetailPanel({
   };
   const handleCancelRefund = async () => {
     if (!call.order_details?.order_id) {
-      toast.error("No synced Clover order found to cancel");
+      toast.error("No synced order found to cancel");
       return;
     }
     const loadingToast = toast.loading("Processing cancellation...");
     try {
       await cancelOrderApi(call.order_details.order_id);
-      toast("Cancellation & refund triggered", { id: loadingToast, icon: "\u{1F4B3}" });
+      toast("Cancellation & refund triggered", { id: loadingToast });
       if (onSuccess) onSuccess();
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to cancel order", { id: loadingToast });
@@ -484,7 +485,7 @@ function DetailPanel({
       border: `1px solid ${sentiment.border}`
     }}
   >
-            {sentiment.emoji} {sentiment.label}
+            {sentiment.label}
           </span>}
 
         {revenue !== null && <span
@@ -499,7 +500,7 @@ function DetailPanel({
       border: `1px solid ${C.greenBdr}`
     }}
   >
-            ${revenue.toFixed(2)}
+            {formatPKR(revenue)}
           </span>}
 
         <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".63rem", color: C.textGhost, marginLeft: "auto", display: "flex", alignItems: "center", gap: 4 }}>
@@ -699,7 +700,7 @@ function DetailPanel({
       border: `1px solid ${call.order_details.status ? C.greenBdr : C.redBdr}`
     }}
   >
-                      {call.order_details.status ? `POS: ${String(call.order_details.status).toUpperCase()}` : "POS: Needs Review"}
+                      {call.order_details.status ? `Status: ${String(call.order_details.status).toUpperCase()}` : "Status: Needs Review"}
                     </span>
                   </div>
 
@@ -736,7 +737,7 @@ function DetailPanel({
   >
                     <CheckCircle2 size={11} style={{ color: call.order_details.status ? C.green : C.red, flexShrink: 0 }} />
                     <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".66rem", color: C.textMuted }}>
-                      {call.order_details.status ? "Order synced to POS successfully" : "POS sync failed \u2014 use Force Print to send manually"}
+                      {call.order_details.status ? "Order confirmed successfully" : "Order sync failed — use Force Print to send manually"}
                     </span>
                   </div>
                 </div>
@@ -784,7 +785,7 @@ function DetailPanel({
                                   </p>}
                               </div>
                               {price > 0 && <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".73rem", fontWeight: 700, color: C.green, flexShrink: 0 }}>
-                                  ${(price * qty).toFixed(2)}
+                                  {formatPKR(price * qty)}
                                 </span>}
                             </div>;
   })}
@@ -805,7 +806,7 @@ function DetailPanel({
                             Order Total
                           </span>
                           <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".9rem", fontWeight: 800, color: C.green }}>
-                            ${revenue.toFixed(2)}
+                            {formatPKR(revenue)}
                           </span>
                         </div>}
                     </div>}
@@ -943,7 +944,7 @@ function DetailPanel({
                             </p>
                           </div>
                           {item.price > 0 && <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".73rem", fontWeight: 700, color: C.gold, flexShrink: 0 }}>
-                              ${(item.price * item.quantity).toFixed(2)}
+                              {formatPKR(item.price * item.quantity)}
                             </span>}
                         </div>)}
                     </div>
@@ -963,7 +964,7 @@ function DetailPanel({
                           Estimated Total
                         </span>
                         <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".9rem", fontWeight: 800, color: C.gold }}>
-                          ${extractedTotal.toFixed(2)}
+                          {formatPKR(extractedTotal)}
                         </span>
                       </div>}
                   </div> : <div
@@ -1098,7 +1099,7 @@ function DetailPanel({
       gridColumn: "1 / -1"
     }}
   >
-              <ShoppingBag size={12} /> Confirm & Place POS Order
+              <ShoppingBag size={12} /> Confirm & Place Order
             </button> : null}
           <button
     onClick={handleBlockCaller}
@@ -1269,7 +1270,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
         total_amount: totalAmount
       };
       await confirmCallOrderApi(call.call_id, payload);
-      toast.success("Order confirmed and synced to Clover POS!");
+      toast.success("Order confirmed successfully!");
       onSuccess();
     } catch (err) {
       const error = err;
@@ -1284,7 +1285,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
         
         <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "1.05rem", fontWeight: 800, color: C.text, margin: 0 }}>Confirm & Place POS Order</h2>
+            <h2 style={{ fontFamily: "Sora, sans-serif", fontSize: "1.05rem", fontWeight: 800, color: C.text, margin: 0 }}>Confirm & Place Order</h2>
             <p style={{ fontFamily: "Sora, sans-serif", fontSize: "0.68rem", color: C.textMuted, margin: "3px 0 0" }}>Call ID: {call.id.slice(0, 16)}...</p>
           </div>
           <button onClick={onClose} style={{ background: C.inputBg, border: `1px solid ${C.border}`, width: 30, height: 30, borderRadius: 8, cursor: "pointer", color: C.textMuted, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1350,7 +1351,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
       transition: "all .15s"
     }}
   >
-                    {type === "pickup" ? "Distributor Pickup \u{1F6CD}\uFE0F" : type === "delivery" ? "Wholesale Delivery \u{1F69A}" : type}
+                    {type === "pickup" ? "Distributor Pickup" : type === "delivery" ? "Wholesale Delivery" : type}
                   </button>)}
               </div>
             </div>
@@ -1383,7 +1384,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
   >
                     <option value="">-- Select a product --</option>
                     {menuItems.map((item) => <option key={item.id} value={item.name}>
-                        {item.name} (${item.price.toFixed(2)})
+                        {item.name} ({formatPKR(item.price)})
                       </option>)}
                   </select>
                   <ChevronDown size={12} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: C.textMuted, pointerEvents: "none" }} />
@@ -1453,8 +1454,8 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
   />
                       </div>
 
-                      <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.72rem", color: C.textSub, textAlign: "right" }}>${item.price.toFixed(2)}</span>
-                      <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.green, textAlign: "right" }}>${(item.price * item.quantity).toFixed(2)}</span>
+                      <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.72rem", color: C.textSub, textAlign: "right" }}>{formatPKR(item.price)}</span>
+                      <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.green, textAlign: "right" }}>{formatPKR(item.price * item.quantity)}</span>
 
                       <button
     type="button"
@@ -1469,7 +1470,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
                 
                 <div style={{ padding: "12px 14px", background: "#FAFBFD", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.71rem", color: C.textMuted }}>Total Amount</span>
-                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.92rem", fontWeight: 800, color: C.green }}>${totalAmount.toFixed(2)}</span>
+                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.92rem", fontWeight: 800, color: C.green }}>{formatPKR(totalAmount)}</span>
                 </div>
               </div>}
           </div>
@@ -1515,7 +1516,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
       transition: "opacity .15s"
     }}
   >
-            {submitting ? "Processing..." : "Place POS Order"}
+            {submitting ? "Processing..." : "Place Order"}
           </button>
         </div>
 
@@ -1942,7 +1943,7 @@ function CallsOrders() {
             <span style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.textGhost, fontFamily: "'Sora',sans-serif", marginRight: 2 }}>Sentiment</span>
             {["all", "positive", "neutral", "negative"].map((s) => {
     const active = sentimentFilter === s;
-    const label = s === "all" ? "All" : s === "positive" ? "\u{1F60A} Happy" : s === "neutral" ? "\u{1F610} Neutral" : "\u{1F621} Frustrated";
+    const label = s === "all" ? "All" : s === "positive" ? "Happy" : s === "neutral" ? "Neutral" : "Frustrated";
     const accent = s === "positive" ? { bg: C.greenBg, bdr: C.greenBdr, txt: C.green } : s === "neutral" ? { bg: C.goldBg, bdr: C.goldBdr, txt: C.gold } : s === "negative" ? { bg: C.redBg, bdr: C.redBdr, txt: C.red } : { bg: C.purpleBg, bdr: C.purpleBdr, txt: C.purple };
     return <button
       key={s}
@@ -2154,14 +2155,14 @@ function CallsOrders() {
         whiteSpace: "nowrap"
       }}
     >
-                            {sentiment.emoji} {sentiment.label}
+                            {sentiment.label}
                           </span> : <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".72rem", color: "rgba(0,0,0,.15)" }}>—</span>}
                       </div>
 
                       
                       <div>
                         {revenue !== null ? <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".75rem", fontWeight: 700, color: C.green }}>
-                            ${revenue.toFixed(2)}
+                            {formatPKR(revenue)}
                           </span> : <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".72rem", color: "rgba(0,0,0,.15)" }}>
                             —
                           </span>}

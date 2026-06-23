@@ -63,10 +63,10 @@ const WAIT_OPTIONS = [
   "90 min"
 ];
 const INTEGRATIONS = [
-  { name: "Clover POS", desc: "Sync orders and products to your fulfillment system", icon: "\u{1F340}" },
-  { name: "Calendly", desc: "Manage consultations and meeting slots", icon: "\u{1F4C5}" },
-  { name: "DoorDash Drive", desc: "Dispatch deliveries through DoorDash fleet", icon: "\u{1F6F5}" },
-  { name: "Stripe", desc: "Payment processing and digital receipts", icon: "\u{1F4B3}" }
+  { name: "Order Sync", desc: "Sync orders and products to your fulfillment system" },
+  { name: "Calendly", desc: "Manage consultations and meeting slots" },
+  { name: "DoorDash Drive", desc: "Dispatch deliveries through DoorDash fleet" },
+  { name: "Stripe", desc: "Payment processing and digital receipts" },
 ];
 const SMS_ITEMS = [
   { label: "Order confirmed", desc: "Text the customer when their order is accepted" },
@@ -80,7 +80,7 @@ const SECTIONS = [
   { id: "greetings", label: "Greetings", icon: <MessageSquare size={15} />, desc: "Open & closed messages" },
   { id: "prompts", label: "System Prompts", icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>, desc: "AI behavioral rules" },
   { id: "phone", label: "Phone", icon: <PhoneCall size={15} />, desc: "Number & call routing" },
-  { id: "integrations", label: "Integrations", icon: <Link2 size={15} />, desc: "POS & platform links" }
+  { id: "integrations", label: "Integrations", icon: <Link2 size={15} />, desc: "Platform links" }
 ];
 const CSS = `
   @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
@@ -1192,10 +1192,12 @@ function SettingsPage() {
       </div>
 
       <Card faded>
-        <CardHeader title="POS & Platform Connections" subtitle="Sync menus and orders automatically" icon={<Link2 size={14} />} badge={<PlannedBadge />} />
+        <CardHeader title="Platform Connections" subtitle="Sync menus and orders automatically" icon={<Link2 size={14} />} badge={<PlannedBadge />} />
         <CardBody>
           {INTEGRATIONS.map((intg) => <div key={intg.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", borderRadius: 10, border: `1.5px solid ${C.border}`, background: C.bg, flexWrap: "wrap" }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: C.white, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem" }}>{intg.icon}</div>
+              <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: C.purpleBg, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.purpleAlt }}>
+                <Link2 size={16} />
+              </div>
               <div style={{ flex: 1, minWidth: 110 }}>
                 <p style={{ margin: 0, fontFamily: C.font, fontSize: ".81rem", fontWeight: 700, color: C.text }}>{intg.name}</p>
                 <p style={{ margin: "2px 0 0", fontFamily: C.font, fontSize: ".7rem", color: C.textMuted }}>{intg.desc}</p>
@@ -1215,7 +1217,7 @@ function SettingsPage() {
   />
         <CardBody>
           <div className="vx-g3">
-            {[{ name: "Uber Eats", cat: "Delivery" }, { name: "Lightspeed", cat: "POS" }, { name: "Grubhub", cat: "Delivery" }, { name: "Checkmate", cat: "Aggregator" }].map((item) => <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 9, border: `1px solid ${C.border}`, background: C.bg }}>
+            {[{ name: "Uber Eats", cat: "Delivery" }, { name: "Lightspeed", cat: "Retail" }, { name: "Grubhub", cat: "Delivery" }, { name: "Checkmate", cat: "Aggregator" }].map((item) => <div key={item.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 9, border: `1px solid ${C.border}`, background: C.bg }}>
                 <p style={{ margin: 0, fontFamily: C.font, fontSize: ".78rem", fontWeight: 700, color: C.text, flex: 1 }}>{item.name}</p>
                 <span style={{ fontFamily: C.font, fontSize: ".61rem", fontWeight: 700, padding: "2px 7px", borderRadius: 100, background: C.purpleLight, color: C.purpleAlt, whiteSpace: "nowrap" }}>{item.cat}</span>
               </div>)}
@@ -1306,13 +1308,13 @@ function SettingsPage() {
         
         <main className="vx-main">
           <div style={{ maxWidth: 860, margin: "0 auto" }}>
-            {activeSection === "store" && <StoreSection />}
-            {activeSection === "hours" && <HoursSection />}
-            {activeSection === "voice" && <VoiceSection />}
-            {activeSection === "greetings" && <GreetingsSection />}
-            {activeSection === "prompts" && <PromptsSection />}
-            {activeSection === "phone" && <PhoneSection />}
-            {activeSection === "integrations" && <IntegrationsSection />}
+            {activeSection === "store" && StoreSection()}
+            {activeSection === "hours" && HoursSection()}
+            {activeSection === "voice" && VoiceSection()}
+            {activeSection === "greetings" && GreetingsSection()}
+            {activeSection === "prompts" && PromptsSection()}
+            {activeSection === "phone" && PhoneSection()}
+            {activeSection === "integrations" && IntegrationsSection()}
           </div>
         </main>
 

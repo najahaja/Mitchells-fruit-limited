@@ -60,7 +60,17 @@ async def create_phone_call(
     metadata: dict | None = None,
     dynamic_variables: dict | None = None,
 ) -> dict:
+    api_key = os.getenv("RETELL_API_KEY", "")
+    if not api_key:
+        raise ValueError("RETELL_API_KEY is not configured in backend/.env")
+
     from_number = from_number or os.getenv("RETELL_PHONE_NUMBER", "")
+    if not from_number:
+        raise ValueError(
+            "RETELL_PHONE_NUMBER is not configured. Add your Retell "
+            "outbound number in E.164 format (e.g. +14155551234)."
+        )
+
     agent_id = (
         override_agent_id
         or os.getenv("RETELL_OUTBOUND_AGENT_ID", "")
@@ -72,6 +82,7 @@ async def create_phone_call(
     }
     if agent_id:
         payload["override_agent_id"] = agent_id
+        payload["override_agent_version"] = 0
     if metadata:
         payload["metadata"] = metadata
     if dynamic_variables:
@@ -84,7 +95,21 @@ async def create_phone_call(
             headers=_headers(),
             json=payload,
         )
-        response.raise_for_status()
+        if response.status_code >= 400:
+            body = response.text.strip()
+            if response.status_code == 404:
+                raise ValueError(
+                    "Retell outbound calling is not available (404). "
+                    "Check: (1) Phone Numbers tab exists in Retell dashboard, "
+                    "(2) RETELL_PHONE_NUMBER is purchased/imported in Retell, "
+                    "(3) RETELL_API_KEY belongs to the same workspace, "
+                    "(4) contact Retell support to enable PSTN/outbound if needed. "
+                    f"Details: {body or 'empty response'}"
+                )
+            raise ValueError(
+                f"Retell API error {response.status_code}: "
+                f"{body or 'empty response'}"
+            )
         return response.json()
 
 

@@ -8,9 +8,10 @@
 #   chmod +x deploy/deploy.sh
 #   sudo ./deploy/deploy.sh
 #
-# Before first run, create:
+# Before first run, create on the server (or set VITE_BASE_URL when running deploy):
 #   $APP_DIR/backend/.env
 #   $APP_DIR/frontend/.env   (VITE_BASE_URL=http://YOUR_SERVER_IP:8000/api)
+# frontend/.env is NOT in git — deploy backs it up before each sync.
 #
 
 set -euo pipefail
@@ -23,6 +24,8 @@ APP_USER="${APP_USER:-www-data}"
 APP_HOME="${APP_HOME:-$APP_DIR}"
 NPM_CACHE="${NPM_CACHE:-$APP_DIR/.npm-cache}"
 PM2_HOME="${PM2_HOME:-$APP_DIR/.pm2}"
+ENV_BACKUP_DIR="${ENV_BACKUP_DIR:-$APP_DIR/.deploy-env-backup}"
+VITE_BASE_URL="${VITE_BASE_URL:-}"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
 SERVICE_NAME="${SERVICE_NAME:-mitchells-backend}"
@@ -56,13 +59,46 @@ configure_git_safe() {
 
 sync_repo() {
   log "Syncing to origin/$BRANCH (discards local server edits) ..."
+  backup_env_files
   run_as_app "
     set -euo pipefail
     git -C '$APP_DIR' fetch origin '$BRANCH'
     git -C '$APP_DIR' checkout '$BRANCH'
     git -C '$APP_DIR' reset --hard 'origin/$BRANCH'
-    git -C '$APP_DIR' clean -fd
+    git -C '$APP_DIR' clean -fd \
+      --exclude=frontend/.env \
+      --exclude=backend/.env \
+      --exclude=.deploy-env-backup
   "
+  restore_env_files
+}
+
+backup_env_files() {
+  mkdir -p "$ENV_BACKUP_DIR"
+  if [[ -f "$APP_DIR/frontend/.env" ]]; then
+    cp "$APP_DIR/frontend/.env" "$ENV_BACKUP_DIR/frontend.env"
+  fi
+  if [[ -f "$APP_DIR/backend/.env" ]]; then
+    cp "$APP_DIR/backend/.env" "$ENV_BACKUP_DIR/backend.env"
+  fi
+}
+
+restore_env_files() {
+  if [[ -f "$ENV_BACKUP_DIR/frontend.env" ]]; then
+    cp "$ENV_BACKUP_DIR/frontend.env" "$APP_DIR/frontend/.env"
+    log "Restored frontend/.env from deploy backup"
+  elif [[ -n "$VITE_BASE_URL" ]]; then
+    printf 'VITE_BASE_URL=%s\n' "$VITE_BASE_URL" > "$APP_DIR/frontend/.env"
+    log "Created frontend/.env from VITE_BASE_URL"
+  elif [[ ! -f "$APP_DIR/frontend/.env" ]]; then
+    log "WARN: frontend/.env missing — copy frontend/.env.example and set VITE_BASE_URL"
+  fi
+  if [[ -f "$ENV_BACKUP_DIR/backend.env" ]]; then
+    cp "$ENV_BACKUP_DIR/backend.env" "$APP_DIR/backend/.env"
+    log "Restored backend/.env from deploy backup"
+  fi
+  chown "$APP_USER:$APP_USER" "$APP_DIR/frontend/.env" 2>/dev/null || true
+  chown "$APP_USER:$APP_USER" "$APP_DIR/backend/.env" 2>/dev/null || true
 }
 
 if [[ "${EUID}" -ne 0 ]]; then

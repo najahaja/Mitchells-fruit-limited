@@ -6,18 +6,15 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-# Load database environment variables first
 current_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
 load_dotenv(os.path.join(backend_dir, ".env"))
 
-# Add backend directory to path so imports work correctly
 sys.path.append(backend_dir)
 
 from src.utils.db import AsyncSessionLocal, MenuCategory, MenuItem
 from sqlalchemy import delete
 
-# Define the products data
 PRODUCT_CATALOG = {
     "Jams & Marmalades": {
         "description": "Authentic, rich fruit jams and marmalades prepared from chosen fresh fruits.",
@@ -25,42 +22,42 @@ PRODUCT_CATALOG = {
             {
                 "name": "Mango Jam",
                 "description": "Sweet and luscious mango jam made from premium mangoes.",
-                "price": 3.50,
+                "price": 340,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Mixed Fruit Jam",
                 "description": "A delightful blend of fresh seasonal fruits.",
-                "price": 3.25,
+                "price": 320,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Strawberry Jam",
                 "description": "Juicy strawberries cooked into a rich, sweet spread.",
-                "price": 3.99,
+                "price": 350,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Golden Mist Marmalade",
                 "description": "Classic orange marmalade with fine peel shreds.",
-                "price": 3.75,
+                "price": 320,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Apple Jelly",
                 "description": "Clear and sweet apple jelly.",
-                "price": 3.00,
+                "price": 310,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Pineapple Jam",
                 "description": "Tangy and sweet jam loaded with pineapple bits.",
-                "price": 3.60,
+                "price": 330,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
@@ -72,28 +69,28 @@ PRODUCT_CATALOG = {
             {
                 "name": "Lemon Squash",
                 "description": "Refreshing squash made with natural lemon juice concentrate.",
-                "price": 4.25,
+                "price": 340,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Orange Squash",
                 "description": "Zesty orange squash packed with citrus flavor.",
-                "price": 4.00,
+                "price": 340,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Mango Squash",
                 "description": "Rich mango pulp concentrate for a refreshing summer drink.",
-                "price": 4.50,
+                "price": 340,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Lime Juice Cordial",
                 "description": "Clear and sweet lime cordial, perfect for mixing.",
-                "price": 4.75,
+                "price": 340,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
@@ -105,35 +102,35 @@ PRODUCT_CATALOG = {
             {
                 "name": "Tomato Ketchup",
                 "description": "Traditional thick tomato ketchup from vine-ripe tomatoes.",
-                "price": 2.99,
+                "price": 180,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Chili Garlic Sauce",
                 "description": "Zesty sauce blending hot red chilies and fresh garlic.",
-                "price": 3.25,
+                "price": 195,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Tamarind (Imli) Sauce",
                 "description": "Traditional sweet and sour tamarind dipping sauce.",
-                "price": 3.50,
+                "price": 220,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Hot Chili Sauce",
                 "description": "Fiery hot red chili sauce to spice up any dish.",
-                "price": 2.75,
+                "price": 200,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Green Chili Sauce",
                 "description": "Sharp and spicy sauce made from fresh green chilies.",
-                "price": 2.75,
+                "price": 240,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
@@ -145,21 +142,21 @@ PRODUCT_CATALOG = {
             {
                 "name": "Mango Pickle in Oil",
                 "description": "Tangy green mangoes pickled in mustard oil with traditional spices.",
-                "price": 3.80,
+                "price": 270,
                 "allergens": "Mustard",
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Mixed Pickle in Oil",
                 "description": "A savory mix of vegetables and mangoes in spiced oil.",
-                "price": 3.99,
+                "price": 260,
                 "allergens": "Mustard",
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Garlic Pickle in Oil",
                 "description": "Whole garlic cloves pickled with aromatic spices.",
-                "price": 4.20,
+                "price": 255,
                 "allergens": "Mustard",
                 "prep_time_minutes": 0,
             },
@@ -171,28 +168,28 @@ PRODUCT_CATALOG = {
             {
                 "name": "Milk Toffees",
                 "description": "Classic rich and chewy milk toffees.",
-                "price": 1.99,
+                "price": 180,
                 "allergens": "Milk",
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Butter Scotch",
                 "description": "Creamy butterscotch hard candies.",
-                "price": 2.25,
+                "price": 180,
                 "allergens": "Milk",
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Menthol Drops",
                 "description": "Cool and soothing mint throat-soothers.",
-                "price": 1.50,
+                "price": 120,
                 "allergens": None,
                 "prep_time_minutes": 0,
             },
             {
                 "name": "Chocolate Éclairs",
                 "description": "Chewy caramels filled with rich chocolate centers.",
-                "price": 2.50,
+                "price": 350,
                 "allergens": "Milk, Soy",
                 "prep_time_minutes": 0,
             },
@@ -207,7 +204,6 @@ async def seed():
     
     async with AsyncSessionLocal() as db:
         print("Clearing existing menu items and categories...")
-        # Wiping old data first to avoid mix-ups
         await db.execute(delete(MenuItem))
         await db.execute(delete(MenuCategory))
         await db.commit()
@@ -225,7 +221,7 @@ async def seed():
                 created_at=now,
             )
             db.add(category)
-            await db.flush()  # to generate category.id
+            await db.flush()
             
             for item_index, item_data in enumerate(cat_data["items"]):
                 item = MenuItem(

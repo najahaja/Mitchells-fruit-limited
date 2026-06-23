@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import toast from "react-hot-toast";
+import { formatPKR } from "../../utils/currency";
 import {
   createCategoryApi,
   createItemApi,
@@ -150,7 +151,7 @@ function ItemModal({
   />
             </Field>
           </div>
-          <Field label="Price ($) *">
+          <Field label="Price (PKR) *">
             <input
     required
     type="number"
@@ -263,7 +264,7 @@ function SpecialModal({
           </div>
           <Field label="Discount Type">
             <div style={{ display: "flex", gap: 6 }}>
-              {[["percentage", "% Percentage"], ["fixed", "$ Fixed Amount"]].map(([val, label]) => <button
+              {[["percentage", "% Percentage"], ["fixed", "PKR Fixed Amount"]].map(([val, label]) => <button
     key={val}
     type="button"
     onClick={() => upd("discount_type", val)}
@@ -348,12 +349,12 @@ function parseMenuText(text) {
       continue;
     }
     const itemMatch = line.match(
-      /^-\s+(.+?)\s+[—–-]+\s+(\$[\d.]+)\s*\|?\s*(.*)?$/
+      /^-\s+(.+?)\s+[—–-]+\s+(?:(?:Rs\.?|PKR)\s*)?([\d,]+(?:\.\d+)?|\$[\d.]+)\s*\|?\s*(.*)?$/i
     );
     if (itemMatch && current) {
       current.items.push({
         name: itemMatch[1].trim(),
-        price: itemMatch[2].trim(),
+        price: itemMatch[2].replace(/,/g, "").replace(/^\$/, ""),
         description: itemMatch[3]?.trim() ?? ""
       });
     }
@@ -534,7 +535,7 @@ function PreviewModal({
       border: `1px solid ${C.purpleBdr}`
     }}
   >
-                          {item.price}
+                          {formatPKR(item.price)}
                         </span>
                       </div>
                       {item.description && <p
@@ -651,7 +652,7 @@ function SpecialCard({
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
         <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.redBg, color: C.red, border: `1px solid ${C.redBdr}`, padding: "3px 10px", borderRadius: 7 }}>
-          {special.discount_type === "percentage" ? `${special.discount_value}% off` : `$${special.discount_value} off`}
+          {special.discount_type === "percentage" ? `${special.discount_value}% off` : `${formatPKR(special.discount_value)} off`}
         </span>
         {special.applicable_items && <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, background: C.purpleBg, color: C.purpleText, border: `1px solid ${C.purpleBdr}`, padding: "3px 10px", borderRadius: 7 }}>
             📦 {special.applicable_items}
@@ -1020,7 +1021,7 @@ function Menu() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>Product Catalog</h1>
             <span style={{ fontSize: 11, fontWeight: 600, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}`, borderRadius: 20, padding: "2px 9px" }}>
-              ● POS Connected
+              Catalog synced
             </span>
             <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>
               Synced just now
@@ -1262,7 +1263,7 @@ function Menu() {
                         <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>86'd</span>
                       </div>}
                     {allCatItems.length > 0 && <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: C.textSub }}>${avgPrice.toFixed(2)}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: C.textSub }}>{formatPKR(avgPrice)}</span>
                         <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>avg</span>
                       </div>}
                   </div>
@@ -1385,7 +1386,7 @@ function Menu() {
       /* Price */
     }
                             <span style={{ fontSize: 13, fontWeight: 700, color: item.is_available ? C.text : C.textMuted, textAlign: "right" }}>
-                              ${(item.price ?? 0).toFixed(2)}
+                              {formatPKR(item.price ?? 0)}
                             </span>
 
                             {
@@ -1454,7 +1455,7 @@ function Menu() {
                                     <p style={{ fontSize: 12, color: C.textSub, margin: 0, lineHeight: 1.6 }}>{item.description}</p>
                                   </div>}
                                 {item.allergens && <div style={{ background: C.goldBg, border: `1px solid ${C.goldBdr}`, borderRadius: 10, padding: "10px 14px", flex: "1 1 140px" }}>
-                                    <p style={{ fontSize: 10, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 6px" }}>⚠ Allergens</p>
+                                    <p style={{ fontSize: 10, fontWeight: 700, color: C.gold, textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 6px" }}>Allergens</p>
                                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                                       {item.allergens.split(/,\s*/).map((a) => <span key={a} style={{ fontSize: 11, fontWeight: 600, background: "rgba(184,131,42,.14)", color: C.gold, border: `1px solid ${C.goldBdr}`, borderRadius: 5, padding: "2px 8px" }}>{a.trim()}</span>)}
                                     </div>
@@ -1464,7 +1465,7 @@ function Menu() {
                                     <p style={{ fontSize: 16, fontWeight: 800, color: C.text, margin: 0 }}>{item.prep_time_minutes}<span style={{ fontSize: 11, fontWeight: 600, color: C.textMuted, marginLeft: 3 }}>min</span></p>
                                   </div>}
                                 <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", flex: "0 0 auto" }}>
-                                  <p style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 4px" }}>POS ID</p>
+                                  <p style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: ".06em", margin: "0 0 4px" }}>Product ID</p>
                                   <span style={{ fontFamily: "'Courier New', monospace", fontSize: 12, fontWeight: 700, background: C.purpleBg, color: C.purpleText, border: `1px solid ${C.purpleBdr}`, borderRadius: 6, padding: "3px 10px", display: "inline-block" }}>
                                     {item.id.slice(0, 8)}
                                   </span>

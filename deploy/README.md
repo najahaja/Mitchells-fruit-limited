@@ -22,6 +22,10 @@ sudo nano /opt/mitchells-fruit-limited/backend/.env
 sudo nano /opt/mitchells-fruit-limited/frontend/.env
 # Example:
 # VITE_BASE_URL=http://YOUR_SERVER_IP:8000/api
+
+# frontend/.env is not stored in git. Deploy backs it up to
+# .deploy-env-backup/ before each git sync and restores it after.
+# Or pass on deploy: sudo VITE_BASE_URL=http://YOUR_IP:8000/api ./deploy/deploy.sh
 ```
 
 ## First deploy
