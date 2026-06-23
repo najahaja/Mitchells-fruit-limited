@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.utils.db import get_db, User
 from src.utils.dependencies import get_current_user
 from src.api.outbound.service import outbound_service
-from src.api.outbound.webhook import handle_retell_webhook
 from src.api.outbound import repository as repo
 from src.api.outbound.schemas import (
     CampaignCreate,
@@ -305,4 +304,5 @@ async def retell_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    return await handle_retell_webhook(request, db)
+    from src.api.retell.router import webhook as unified_webhook
+    return await unified_webhook(request, db)

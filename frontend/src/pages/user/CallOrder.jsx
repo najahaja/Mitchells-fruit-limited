@@ -49,7 +49,14 @@ function formatTimestamp(ts) {
   };
 }
 function getDisplayName(c) {
-  return c.customer_name_extracted ?? c.customer_name ?? "Unknown";
+  const name = (
+    c.customer_name_extracted ||
+    c.customer_name ||
+    c.caller_name ||
+    c.order_details?.customer_name ||
+    ""
+  ).trim();
+  return name || "Unknown";
 }
 function hasOrder(c) {
   if (c.order_booked) return true;

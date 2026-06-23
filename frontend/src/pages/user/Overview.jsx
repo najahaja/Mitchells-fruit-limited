@@ -729,11 +729,14 @@ export default function Overview() {
               {recentOrders.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 1, overflowY: "auto", flex: 1, minHeight: 0 }}>
                   {recentOrders.map((c) => {
-                    const name =
-                      c.customer_name_extracted ??
-                      c.customer_name ??
-                      c.caller_phone ??
-                      "Unknown";
+                    const name = (
+                      c.customer_name_extracted ||
+                      c.customer_name ||
+                      c.caller_name ||
+                      c.order_details?.customer_name ||
+                      c.caller_phone ||
+                      "Unknown"
+                    ).trim() || c.caller_phone || "Unknown";
                     const amt = getOrderRevenue(c);
                     return (
                       <div
@@ -826,11 +829,14 @@ export default function Overview() {
               {recentCalls.length > 0 ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 1, overflowY: "auto", flex: 1, minHeight: 0 }}>
                   {recentCalls.map((c) => {
-                    const name =
-                      c.customer_name_extracted ??
-                      c.customer_name ??
-                      c.caller_phone ??
-                      "Unknown";
+                    const name = (
+                      c.customer_name_extracted ||
+                      c.customer_name ||
+                      c.caller_name ||
+                      c.order_details?.customer_name ||
+                      c.caller_phone ||
+                      "Unknown"
+                    ).trim() || c.caller_phone || "Unknown";
                     let rawSent = hasOrder(c) ? "positive" : (c.user_sentiment ?? "").toLowerCase();
                     if (rawSent === "frustrated") rawSent = "negative";
                     const sent = rawSent ? (SENTIMENT[rawSent] ?? null) : null;

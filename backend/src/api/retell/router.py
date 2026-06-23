@@ -8,7 +8,7 @@ from datetime import datetime, date, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi import status as http_status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,6 +95,13 @@ class CallLogResponse(BaseModel):
     party_size: str | None
     created_at: datetime
     order_details: "OrderResponse | None" = None
+
+    @field_validator("customer_name", "customer_name_extracted", mode="before")
+    @classmethod
+    def empty_name_to_none(cls, v):
+        if isinstance(v, str) and not v.strip():
+            return None
+        return v
 
     class Config:
         from_attributes = True
@@ -309,7 +316,7 @@ async def get_calls(
     _: User = Depends(get_current_user),
 ):
     logs = await list_call_logs(db, skip, limit, call_status, order_booked)
-    return [CallLogResponse.model_validate(log) for log in logs]
+    return await _enrich_call_logs_with_caller_names(db, logs)
 
 
 @router.get("/calls/{call_id}", response_model=CallLogResponse)
@@ -321,7 +328,8 @@ async def get_call(
     log = await get_call_log_by_call_id(db, call_id)
     if not log:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Call log not found")
-    return CallLogResponse.model_validate(log)
+    enriched = await _enrich_call_logs_with_caller_names(db, [log])
+    return enriched[0]
 
 
 @router.get("/calls/{call_id}/live")
@@ -760,6 +768,52 @@ async def inbound_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     )
 
 
+def _extract_caller_name(data: dict | None) -> str | None:
+    if not data:
+        return None
+    for key in ("customer_name", "caller_name", "name", "owner_name"):
+        val = (data.get(key) or "").strip()
+        if val:
+            return val
+    return None
+
+
+def _is_outbound_call(call_data: dict) -> bool:
+    if call_data.get("direction") == "outbound":
+        return True
+    metadata = call_data.get("metadata") or {}
+    return bool(metadata.get("campaign_id") or metadata.get("contact_id"))
+
+
+async def _enrich_call_logs_with_caller_names(
+    db: AsyncSession,
+    logs: list,
+) -> list[CallLogResponse]:
+    phones = {
+        log.caller_phone
+        for log in logs
+        if log.caller_phone
+        and not (log.customer_name_extracted or log.customer_name)
+    }
+    caller_names: dict[str, str] = {}
+    if phones:
+        result = await db.execute(
+            select(Caller).where(Caller.phone_number.in_(phones))
+        )
+        for caller in result.scalars().all():
+            if caller.customer_name:
+                caller_names[caller.phone_number] = caller.customer_name
+    responses = []
+    for log in logs:
+        resp = CallLogResponse.model_validate(log)
+        if not resp.customer_name_extracted and not resp.customer_name:
+            name = caller_names.get(log.caller_phone)
+            if name:
+                resp = resp.model_copy(update={"customer_name": name})
+        responses.append(resp)
+    return responses
+
+
 @router.post("/webhook", response_model=WebhookResponse)
 async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
     """
@@ -780,6 +834,11 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
     event_type = event.get("event")
     call_data = event.get("call", {})
     call_id = call_data.get("call_id", "")
+
+    if _is_outbound_call(call_data):
+        from src.api.outbound.service import outbound_service
+        await outbound_service.process_webhook(db, event)
+        return WebhookResponse(received=True)
     
     if event_type == "call_ended":
         from_number = call_data.get("from_number", "")
@@ -787,7 +846,7 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
         
         # Extract variables collected from conversational tool calls during the call
         collected = call_data.get("collected_dynamic_variables") or {}
-        customer_name_extracted = (collected.get("customer_name") or "").strip()
+        customer_name_extracted = _extract_caller_name(collected)
         order_items = (collected.get("order_items_summary") or "").strip() or None
         order_type = (collected.get("order_type") or "").strip() or None
         special_notes = (collected.get("special_notes") or "").strip() or None
@@ -957,6 +1016,19 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
         if not from_number and existing_log:
             from_number = existing_log.caller_phone
 
+        collected = call_data.get("collected_dynamic_variables") or {}
+        extracted_name = (
+            _extract_caller_name(collected)
+            or _extract_caller_name(custom)
+        )
+        name_updates: dict = {}
+        if extracted_name:
+            name_updates["customer_name_extracted"] = extracted_name
+            if not existing_log or not existing_log.customer_name:
+                name_updates["customer_name"] = extracted_name
+            if from_number:
+                await upsert_caller(db, from_number, extracted_name)
+
         # Link order if one was created recently but not linked
         recent_order = await get_order_by_call_id(db, call_id)
         if not recent_order and from_number:
@@ -993,7 +1065,10 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
             )
             if structured:
                 # Create order from extracted list
-                customer_name_extracted = (custom.get("customer_name") or "").strip()
+                customer_name_extracted = (
+                    _extract_caller_name(custom)
+                    or _extract_caller_name(collected)
+                )
                 if not customer_name_extracted and existing_log:
                     customer_name_extracted = existing_log.customer_name_extracted or existing_log.customer_name
                 customer = customer_name_extracted or "Guest"
@@ -1065,6 +1140,7 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 call_reason=call_reason,
                 order_items=analysis.get("call_summary"),  # use summary as AI draft
                 order_type=inferred_order_type,
+                **name_updates,
             )
         else:
             await update_call_log(
@@ -1075,6 +1151,7 @@ async def webhook(request: Request, db: AsyncSession = Depends(get_db)):
                 order_booked=is_order_booked,
                 call_successful=is_success,
                 call_reason=call_reason,
+                **name_updates,
             )
 
     return WebhookResponse(received=True)
@@ -1293,6 +1370,7 @@ async def log_trade_inquiry(request: Request, db: AsyncSession = Depends(get_db)
             order_items=order_desc,
             order_type="B2B Trade Inquiry",
             special_notes=special_notes,
+            customer_name=caller_name or None,
             customer_name_extracted=caller_name or None,
         )
 
@@ -1363,6 +1441,7 @@ async def log_export_inquiry(request: Request, db: AsyncSession = Depends(get_db
             order_items=order_desc,
             order_type="B2B Export Inquiry",
             special_notes=special_notes,
+            customer_name=caller_name or None,
             customer_name_extracted=caller_name or None,
         )
 
@@ -1442,6 +1521,7 @@ async def log_complaint(request: Request, db: AsyncSession = Depends(get_db)):
             call_id=call_id,
             call_reason=f"Complaint: {product_name}" if product_name else "Complaint",
             special_notes=special_notes,
+            customer_name=caller_name or None,
             customer_name_extracted=caller_name or None,
             user_sentiment="Frustrated",
         )
@@ -1506,6 +1586,7 @@ async def log_callback_request(request: Request, db: AsyncSession = Depends(get_
             call_id=call_id,
             call_reason=f"Callback: {reason}" if reason else "Callback Request",
             special_notes=special_notes,
+            customer_name=caller_name or None,
             customer_name_extracted=caller_name or None,
         )
 
