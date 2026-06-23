@@ -42,14 +42,34 @@ run_as_app() {
 }
 
 git_safe() {
-  git -c "safe.directory=$APP_DIR" "$@"
+  git -c "safe.directory=$APP_DIR" -c "safe.directory=*" "$@"
+}
+
+configure_git_safe() {
+  git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+  git config --global --add safe.directory '*' 2>/dev/null || true
+  if id "$APP_USER" &>/dev/null; then
+    run_as_app "git config --global --add safe.directory '$APP_DIR' 2>/dev/null || true"
+    run_as_app "git config --global --add safe.directory '*' 2>/dev/null || true"
+  fi
+}
+
+sync_repo() {
+  log "Syncing to origin/$BRANCH (discards local server edits) ..."
+  run_as_app "
+    set -euo pipefail
+    git -C '$APP_DIR' fetch origin '$BRANCH'
+    git -C '$APP_DIR' checkout '$BRANCH'
+    git -C '$APP_DIR' reset --hard 'origin/$BRANCH'
+    git -C '$APP_DIR' clean -fd
+  "
 }
 
 if [[ "${EUID}" -ne 0 ]]; then
   die "Run as root: sudo $0"
 fi
 
-git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+configure_git_safe
 
 command -v git >/dev/null    || die "git is not installed"
 command -v "$PYTHON" >/dev/null || die "$PYTHON is not installed"
@@ -61,11 +81,7 @@ log "Branch: $BRANCH"
 
 # ── Clone or pull ───────────────────────────────────────────────────────────
 if [[ -d "$APP_DIR/.git" ]]; then
-  log "Syncing to origin/$BRANCH (discards local server edits) ..."
-  git_safe -C "$APP_DIR" fetch origin "$BRANCH"
-  git_safe -C "$APP_DIR" checkout "$BRANCH"
-  git_safe -C "$APP_DIR" reset --hard "origin/$BRANCH"
-  git_safe -C "$APP_DIR" clean -fd
+  sync_repo
 else
   log "Cloning repository ..."
   mkdir -p "$(dirname "$APP_DIR")"
