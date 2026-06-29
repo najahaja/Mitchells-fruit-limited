@@ -1,14 +1,14 @@
 # Mitchell's Fruit Farms — Voice AI Sales Agent Platform
 
-A unified, full-stack platform that integrates a **Retell AI Voice Agent** with a serverless **Neon PostgreSQL Database** (with optional **Clover POS System** integration) to automate inbound customer calls, B2B wholesale orders, international export inquiries, customer complaint logging, and callback requests for **Mitchell's Fruit Farms** (a historic and trusted food manufacturer in Pakistan since 1933).
+A unified, full-stack platform that integrates a **Retell AI Voice Agent** with a serverless **Neon PostgreSQL Database** (with optional **POS System** integration) to automate inbound customer calls, B2B wholesale orders, international export inquiries, customer complaint logging, customer feedback, and callback requests for **Mitchell's Fruit Farms** (a historic and trusted food manufacturer in Pakistan since 1933).
 
 ---
 
 ## 📖 Project Overview
 
 This repository consists of two main components:
-1. **`backend` (FastAPI Backend)**: Serves as the central API orchestrator. It manages database persistence, processes Retell AI webhook life cycle events (e.g., call completion, live state retrieval), auto-extracts order items from natural conversation transcripts, and maintains a product catalog. It operates seamlessly using a serverless **Neon PostgreSQL** database; integration with Clover POS is entirely optional (when keys are configured, it syncs catalog items and pushes orders to Clover POS with warehouse printing).
-2. **`frontend` (React + JavaScript Frontend)**: An admin dashboard portal designed to monitor call logs, play call recordings, read transcripts, review and edit order drafts, manage products/menu items, and configure the voice agent settings.
+1. **`backend` (FastAPI Backend)**: Serves as the central API orchestrator. It manages database persistence, processes Retell AI webhook life cycle events (e.g., call completion, live state retrieval), auto-extracts order items and customer feedback from natural conversation transcripts, and maintains a product catalog. It operates seamlessly using a serverless **Neon PostgreSQL** database; integration with POS is entirely optional (when keys are configured, it syncs catalog items and pushes orders to POS with warehouse printing).
+2. **`frontend` (React + JavaScript Frontend)**: An admin dashboard portal designed to monitor call logs, play call recordings, read transcripts, review and edit order drafts, manage products/menu items, configure the voice agent settings, and view customer feedback.
 
 ---
 
@@ -20,7 +20,7 @@ This repository consists of two main components:
 - **Database**: PostgreSQL (Serverless via **Neon**)
 - **Migration & Schema Setup**: Automatic DDL migrations integrated directly into the application lifespan
 - **Voice Agent Gateway**: Retell AI REST API & Webhooks
-- **POS & Print Engine**: Clover POS Merchant API (Optional)
+- **POS & Print Engine**: POS Merchant API (Optional)
 - **Auth**: JWT Bearer Tokens with `python-jose` and `passlib` for password hashing
 
 ### Frontend (`frontend`)
@@ -41,8 +41,8 @@ Mitchell's/
 │   ├── requirements.txt                     # Backend python dependencies
 │   ├── retell_agent_config.json             # Pre-configured Retell Agent Conversation Graph
 │   ├── src/
-│   │   ├── api/                             # API Routers (auth, retell, menu, settings, prompts)
-│   │   ├── services/                        # Integrations (Clover API client, Retell API client)
+│   │   ├── api/                             # API Routers (auth, retell, menu, settings, prompts, outbound)
+│   │   ├── services/                        # Integrations (POS API client, Retell API client, Callback Scheduler)
 │   │   └── utils/                           # Core utilities (DB schemas, parsing logic, seed scripts)
 │   └── .env                                 # Backend configuration (ignored by Git)
 │
@@ -52,7 +52,7 @@ Mitchell's/
 │   ├── src/
 │   │   ├── api/                             # Axios clients and API request modules
 │   │   ├── components/                      # Common UI components (Navbar, Modal, Loader)
-│   │   ├── pages/                           # Views (Login, Dashboard Overview, CallLogs, Menu, Settings)
+│   │   ├── pages/                           # Views (Login, Dashboard Overview, CallLogs, Menu, Settings, Outbound)
 │   │   └── App.jsx                          # App Routing and Private Route Guards
 │   └── .env                                 # Frontend base URL config (ignored by Git)
 ```
@@ -62,25 +62,31 @@ Mitchell's/
 ## ⚙️ Key Features
 
 ### 🎙️ 1. Retell AI Voice Agent Integration ("Alex")
-- Built using Retell's **Conversation Flow** graph engine. The agent responds to caller types programmatically (Consumer Inquiries, B2B Trade, Exports, Complaints, Callback requests).
+- Built using Retell's **Conversation Flow** engine. The agent responds to caller types programmatically (Consumer Inquiries, B2B Trade, Exports, Complaints, Callback requests).
 - **Dynamic Context Injection**: During inbound webhooks, the system queries the database to inject dynamic context, including:
   - Custom user parameters (returning caller name, returning status).
   - Business hours validation (verifying if warehouse/corporate operations are open in `Asia/Karachi` timezone).
   - A serialized, up-to-date **Product Catalog** with pricing and active promotions.
 
-### 💳 2. Optional Clover POS Sync & Atomic Order Processing
-- **Inventory Syncing (Optional)**: If Clover is configured, a background task (`_clover_menu_sync_loop`) runs every 5 minutes, fetching items from Clover's inventory API, filtering out internal/service SKUs (e.g., print-service, test-cards), and updating the local menu.
-- **Automated Order Creation (Optional)**: If Clover is configured, the system submits line items to Clover POS using the Atomic Orders endpoint, converting currency representations from float dollars to cents.
-- **Auto-Printing (Optional)**: Triggers physical printer events via Clover's `/print_event` endpoints on order placement or manual reprint requests.
-- **Database Fallback**: If Clover API credentials are omitted, the application runs fully and stores order drafts and the product catalog locally in the Neon PostgreSQL database.
+### 💳 2. Optional POS Sync & Atomic Order Processing
+- **Inventory Syncing (Optional)**: If configured, a background task runs every 5 minutes, fetching items from POS inventory API, filtering out internal/service SKUs (e.g., print-service, test-cards), and updating the local menu.
+- **Automated Order Creation (Optional)**: If POS is configured, the system submits line items to POS using the Atomic Orders endpoint, converting currency representations from float dollars to cents.
+- **Auto-Printing (Optional)**: Triggers physical printer events via POS print endpoints on order placement or manual reprint requests.
+- **Database Fallback**: If POS API credentials are omitted, the application runs fully and stores order drafts and the product catalog locally in the Neon PostgreSQL database.
 
-### 📝 3. Webhook & AI Parsing Engine
-- Automatically processes the `call_ended` webhook.
-- Features a **Natural Language Processing Regex Parser** (`auto_extract_order_items`) that parses free-text conversation summaries to match items against the database, extracting numbers/quantities written before or after item names, resolving plural/singular variants, and drafting orders.
+### 📝 3. Webhook, Parsing Engine & Feedback Loop
+- Automatically processes the `call_ended` and `call_analyzed` webhooks.
+- **Order Parsing**: Features a **Natural Language Processing Regex Parser** (`auto_extract_order_items`) that parses free-text conversation summaries to match items against the database, extracting numbers/quantities written before or after item names, resolving plural/singular variants, and drafting orders.
+- **Customer Feedback extraction**: Captures detailed customer feedback and 1-5 ratings natively through Retell's post-call analysis variables and stores them alongside the call logs.
 
-### 📊 4. Admin Management Dashboard
-- **Live Monitoring & Logs**: Allows listening to call recordings, reading full transcripts, and filtering call logs by status or order booking success.
-- **Draft Review & Order Placement**: Enables agents to edit drafted orders extracted from calls and manually submit them to Clover POS.
+### 📞 4. Outbound Auto-Dialer & Callback Scheduler
+- **Background Scheduler**: A FastAPI background task (`start_recall_scheduler`) automatically checks the database every minute for any scheduled callbacks that are due.
+- **Retell Dispatcher**: Automatically initiates outbound phone calls to customers using Retell's outbound APIs, matching them with the appropriate outbound agent context.
+
+### 📊 5. Admin Management Dashboard
+- **Live Monitoring & Logs**: Allows listening to call recordings, reading full transcripts, and filtering call logs by status or order booking success. View gold-highlighted customer feedback cards and transcript analysis.
+- **Draft Review & Order Placement**: Enables agents to edit drafted orders extracted from calls and manually submit them to POS.
+- **Outbound Campaigns**: Create outbound dialing lists and trigger mass phone calls.
 - **Dynamic Configuration**: UI interface to modify business hours, timezone, greetings, and Retell voice parameters (temperature, speed, interruption sensitivity).
 - **Reporting Analytics**: Visual breakdown of calls/orders over time, repeat callers, and user sentiment.
 
@@ -142,14 +148,14 @@ We use **Neon** (a serverless PostgreSQL platform) for our database.
 
    CORS_ORIGINS=*
 
-   # Clover POS Settings (Optional - leave empty or delete if not using Clover API)
-   CLOVER_API_TOKEN=your_clover_token_here
-   CLOVER_MERCHANT_ID=your_clover_merchant_id_here
+   # POS Settings (Optional - leave empty or delete if not using POS API)
+   CLOVER_API_TOKEN=your_pos_token_here
+   CLOVER_MERCHANT_ID=your_pos_merchant_id_here
    CLOVER_BASE_URL=https://api.clover.com/v3
    CLOVER_ORDER_TYPE_ID=your_order_type_id
    CLOVER_PRINTER_ID=your_printer_id
    ```
-5. Seed Database (Optional - to insert mock data if Clover is not configured):
+5. Seed Database (Optional - to insert mock data if POS is not configured):
    ```bash
    python -m src.utils.seed_mitchells_products
    ```
@@ -195,8 +201,8 @@ During the implementation of this system, several technical challenges were enco
 * **Solution**: Developed a local SQL cache. The catalog data is fetched from the local PostgreSQL database (Neon), formatted compactly, and injected as a dynamic E.164-dependent variable *only* when the webhook triggers the inbound call.
 
 ### 3. POS Integration & Financial Safety (Optional)
-* **Challenge**: Clover's API expects order line items in cents and will fail if price discrepancies exist between what the customer was quoted and what is sent to the POS, or if a sync fails mid-transit.
-* **Solution**: Configured database price-mapping functions (`get_menu_items_prices`). The app pulls current prices directly from verified SQL models in Neon, enforces clean float-to-int multiplication (dollars * 100), and records syncing failures (`clover_error` field in order records) so managers can review the drafts and perform manual overrides in the admin panel if using Clover. If Clover is not used, the system safely processes orders entirely within the Neon database.
+* **Challenge**: POS APIs expect order line items in cents and will fail if price discrepancies exist between what the customer was quoted and what is sent to the POS, or if a sync fails mid-transit.
+* **Solution**: Configured database price-mapping functions (`get_menu_items_prices`). The app pulls current prices directly from verified SQL models in Neon, enforces clean float-to-int multiplication (dollars * 100), and records syncing failures so managers can review the drafts and perform manual overrides in the admin panel if using POS. If POS is not used, the system safely processes orders entirely within the Neon database.
 
 ### 4. Timezone-Aware Operating States
 * **Challenge**: Orders should only be accepted if the warehouse is open. However, servers operate in UTC, while the client operates in Pakistan (`Asia/Karachi`).
