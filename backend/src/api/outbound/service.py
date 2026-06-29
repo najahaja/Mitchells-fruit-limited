@@ -1,6 +1,9 @@
 import asyncio
 import logging
-from datetime import datetime, timezone
+import re
+import os
+import httpx
+from datetime import datetime, timezone, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +16,7 @@ from src.api.outbound.utils import (
     CAMPAIGN_STATUSES,
     merge_contact_payload,
     format_last_order,
+    clean_customer_value,
 )
 from src.utils.db_functions import (
     get_caller_by_phone,
@@ -21,6 +25,112 @@ from src.utils.db_functions import (
 )
 
 _logger = logging.getLogger("outbound_calling")
+
+COMPANY_FIELD_KEYS = (
+    "company_name",
+    "company",
+    "customer_company",
+    "business_name",
+    "shop_name",
+    "store_name",
+    "organization",
+)
+
+
+# ---------------------------------------------------------------------------
+# Recall-time parser
+# ---------------------------------------------------------------------------
+
+_WEEKDAY_MAP = {
+    "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+    "friday": 4, "saturday": 5, "sunday": 6,
+}
+
+def parse_recall_time(text: str) -> datetime | None:
+    """
+    Parse a natural-language recall request from a call summary and return
+    an absolute UTC datetime.
+
+    Handles patterns like:
+      - "call after 30 minutes"
+      - "call back in 2 hours"
+      - "call me tomorrow"
+      - "call next Monday"
+      - "call on Friday"
+      - "call later" / "callback" (defaults to +2 h)
+    Returns None if no recall intent is detected.
+    """
+    if not text:
+        return None
+
+    low = text.lower()
+
+    # Must contain a callback / call-later keyword
+    TRIGGER_KEYWORDS = [
+        "call later", "call back", "callback", "call again",
+        "call after", "call me", "ring me", "try again",
+        "not available", "busy", "call in", "call next", "call on",
+    ]
+    if not any(kw in low for kw in TRIGGER_KEYWORDS):
+        return None
+
+    now = datetime.now(timezone.utc)
+
+    # ── minutes ──────────────────────────────────────────────────────────────
+    m = re.search(r"(\d+)\s*(?:minute|min)", low)
+    if m:
+        return now + timedelta(minutes=int(m.group(1)))
+
+    # ── hours ─────────────────────────────────────────────────────────────────
+    m = re.search(r"(\d+)\s*(?:hour|hr)", low)
+    if m:
+        return now + timedelta(hours=int(m.group(1)))
+
+    # ── "tomorrow" ────────────────────────────────────────────────────────────
+    if "tomorrow" in low:
+        return now + timedelta(days=1)
+
+    # ── specific weekday ──────────────────────────────────────────────────────
+    for day_name, day_idx in _WEEKDAY_MAP.items():
+        if day_name in low:
+            days_ahead = (day_idx - now.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 7  # same weekday → next week
+            return now + timedelta(days=days_ahead)
+
+    # ── "call later" / generic callback → default +2 hours ───────────────────
+    if any(kw in low for kw in ["call later", "call back", "callback", "call again", "try again"]):
+        return now + timedelta(hours=2)
+
+    return None
+
+
+def _extract_company_from_data(*sources: dict | None) -> str | None:
+    for data in sources:
+        if not data:
+            continue
+        for key in COMPANY_FIELD_KEYS:
+            company = clean_customer_value(data.get(key))
+            if company:
+                return company
+    return None
+
+
+def _extract_company_from_summary(summary: str | None) -> str | None:
+    if not summary:
+        return None
+    patterns = (
+        r"\b(?:customer company is|company is|business is|shop is|store is)\s+([A-Z][a-zA-Z0-9'&.-]*(?:\s+[A-Z][a-zA-Z0-9'&.-]*){0,4})\b",
+        r"\b(?:from|at|of)\s+([A-Z][a-zA-Z0-9']+(?:\s+[A-Z][a-zA-Z0-9']+){0,3}\s+(?:Store|Shop|Mart|Distributor|Ltd|Co|Incorporated|Inc|Enterprises|Traders|Supermarket))\b",
+        r"(?:contacted|spoke with|spoke to|called|talked to)\s+(?:.*?)\s+(?:from|at|in|to)\s+([A-Z][a-zA-Z0-9'&.-]*(?:\s+[A-Z][a-zA-Z0-9'&.-]*){0,4})",
+    )
+    for pattern in patterns:
+        m = re.search(pattern, summary, re.IGNORECASE)
+        if m:
+            val = clean_customer_value(m.group(1))
+            if val:
+                return val
+    return None
 
 
 class OutboundCallingService:
@@ -314,6 +424,13 @@ class OutboundCallingService:
             else:
                 customer_type = "new"
 
+        lang = (contact.language_preference or "Urdu").strip().lower()
+        if lang == "urdu":
+            # Dynamic Urdu greeting in Roman script for LLM compatibility
+            greeting = "Assalam-o-Alaikum! Main Mitchell's Fruit Farms se baat kar raha hoon. Kya main aapka thoda waqt le sakta hoon?"
+        else:
+            greeting = "Hello! I am calling from Mitchell's Fruit Farms. May I have a moment of your time?"
+
         return {
             "customer_type": customer_type,
             "shop_name": (
@@ -328,6 +445,8 @@ class OutboundCallingService:
             "product_catalogue": catalogue,
             "company_info": settings.restaurant_info or "",
             "language_preference": contact.language_preference,
+            "greeting": greeting,
+            "begin_message": greeting,
         }
 
     async def _dial_contact(self, db, campaign, contact):
@@ -382,6 +501,15 @@ class OutboundCallingService:
             )
         try:
             retell_data = await retell_service.get_call(call.retell_call_id)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 404:
+                # Call does not exist on Retell (e.g. invalid test data, deleted)
+                await repo.update_contact_status(db, call.contact_id, "failed")
+                return await repo.update_outbound_call(db, call, call_status="failed")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to sync: {exc}",
+            )
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -392,6 +520,7 @@ class OutboundCallingService:
             "duration": retell_data.get("duration_ms"),
             "recording_url": retell_data.get("recording_url"),
             "transcript": retell_data.get("transcript"),
+            "start_timestamp": retell_data.get("start_timestamp"),
         }
         analysis = retell_data.get("call_analysis") or {}
         if analysis.get("call_summary"):
@@ -400,6 +529,131 @@ class OutboundCallingService:
             updates["ended_at"] = datetime.fromtimestamp(
                 retell_data["end_timestamp"] / 1000, tz=timezone.utc
             )
+
+        call_status = updates["call_status"]
+        if call_status in ("completed", "ended"):
+            await repo.update_contact_status(db, call.contact_id, "completed")
+        elif call_status in ("error", "failed"):
+            await repo.update_contact_status(db, call.contact_id, "failed")
+
+        # Extract name and company from summary if not in dynamic variables
+        collected = retell_data.get("collected_dynamic_variables") or {}
+        custom = retell_data.get("custom_analysis_data") or {}
+        extracted_name = None
+        for key in ("customer_name", "caller_name", "name", "owner_name", "user_name", "caller", "customer"):
+            val = clean_customer_value(collected.get(key) or custom.get(key))
+            if val:
+                extracted_name = val
+                break
+
+        summary_text = analysis.get("call_summary") or ""
+        extracted_company = (
+            _extract_company_from_data(collected, custom)
+            or _extract_company_from_summary(summary_text)
+        )
+
+        # Define extraction helpers inside method context
+        def _get_name_from_sum(summary):
+            if not summary: return None
+            m = re.search(r"\b(?:contacted|spoke with|spoke to|called|talked to|conversing with)\s+([A-Z][a-zA-Z.]*(?:\s+[A-Z][a-zA-Z.]*){0,3})\s+(?:from|at|in|to|regarding|about|on)\b", summary)
+            if m:
+                name = m.group(1).strip()
+                if name.lower() not in ("the user", "the customer", "the client", "the distributor", "the retailer", "the agent", "the store", "ahmad store"):
+                    return clean_customer_value(name)
+            m = re.search(r"\b(?:contacted|spoke with|spoke to|called|talked to)\s+([A-Z][a-zA-Z.]*(?:\s+[A-Z][a-zA-Z.]*){0,3})\b", summary)
+            if m:
+                name = m.group(1).strip()
+                if name.lower() not in ("the user", "the customer", "the client", "the distributor", "the retailer", "the agent", "the store", "ahmad store"):
+                    return clean_customer_value(name)
+            return None
+
+        if not extracted_name and summary_text:
+            extracted_name = _get_name_from_sum(summary_text)
+
+        if extracted_name or extracted_company:
+            contact = await repo.get_contact(db, call.contact_id)
+            if contact:
+                kwargs_updates = {}
+                if extracted_name:
+                    kwargs_updates["name"] = extracted_name
+                if extracted_company and not contact.company:
+                    kwargs_updates["company"] = extracted_company
+                if kwargs_updates:
+                    await repo.update_contact(db, contact, **kwargs_updates)
+
+            # Mirror name update to the CallLog record
+            try:
+                from src.utils.db import CallLog
+                res_log = await db.execute(select(CallLog).where(CallLog.call_id == call.retell_call_id))
+                log_record = res_log.scalar_one_or_none()
+                if log_record:
+                    log_record.customer_name = extracted_name
+                    log_record.customer_name_extracted = extracted_name
+                    await db.commit()
+            except Exception:
+                pass
+
+        # Auto-extract order details from summary if call ended
+        if call_status in ("completed", "ended") and summary_text:
+            from src.utils.db_functions import get_order_by_call_id, create_order, auto_extract_order_items
+            recent_order = await get_order_by_call_id(db, call.retell_call_id)
+            if not recent_order:
+                _SUMMARY_ORDER_KEYWORDS = [
+                    "placed an order", "place a business order",
+                    "logged the trade inquiry", "logged the export inquiry",
+                    "trade inquiry", "export inquiry", "import inquiry",
+                    "bulk order", "capturing order details", "successfully logged",
+                    "order for", "reorder", "order request", "recorded the order",
+                    "confirm a reorder", "confirm the order", "placed order",
+                ]
+                call_summary_lower = summary_text.lower()
+                if any(kw in call_summary_lower for kw in _SUMMARY_ORDER_KEYWORDS):
+                    structured = await auto_extract_order_items(db, "", summary_text)
+                    if structured:
+                        customer = extracted_name or "Guest"
+                        phone = call.phone_number or ""
+                        total = sum(i["price"] * i["quantity"] for i in structured)
+
+                        auto_order = await create_order(
+                            db,
+                            caller_phone=phone,
+                            customer_name=customer,
+                            order_items=structured,
+                            order_type="pickup",
+                            delivery_address=None,
+                            total_amount=round(total, 2),
+                            special_notes=None,
+                            call_id=call.retell_call_id,
+                        )
+
+                        # Push to Clover POS if configured
+                        if os.getenv("CLOVER_API_TOKEN") and os.getenv("CLOVER_MERCHANT_ID"):
+                            try:
+                                from src.services import clover_service
+                                from src.utils.db_functions import update_order_clover_status
+                                clover_result = await clover_service.push_order_to_clover(
+                                    order_items=structured,
+                                    customer_name=customer,
+                                )
+                                await update_order_clover_status(
+                                    db, auto_order.order_id,
+                                    clover_result["clover_order_id"], True,
+                                )
+                            except Exception:
+                                pass
+
+                        # Set order_booked on CallLog
+                        try:
+                            from src.utils.db import CallLog
+                            res_log = await db.execute(select(CallLog).where(CallLog.call_id == call.retell_call_id))
+                            log_record = res_log.scalar_one_or_none()
+                            if log_record:
+                                log_record.order_booked = True
+                                log_record.order_items = summary_text
+                                await db.commit()
+                        except Exception:
+                            pass
+
         return await repo.update_outbound_call(db, call, **updates)
 
     async def process_webhook(self, db: AsyncSession, event: dict):
@@ -428,30 +682,94 @@ class OutboundCallingService:
         if event_type in ("call_started",):
             updates["call_status"] = "ongoing"
             updates["started_at"] = datetime.now(timezone.utc)
+            if call_data.get("start_timestamp"):
+                updates["start_timestamp"] = call_data.get("start_timestamp")
             await repo.update_contact_status(db, call.contact_id, "calling")
         elif event_type in ("call_ended",):
-            updates["call_status"] = "ended"
+            updates["call_status"] = call_data.get("call_status", "ended")
             updates["duration"] = call_data.get("duration_ms")
             updates["transcript"] = call_data.get("transcript")
             updates["recording_url"] = call_data.get("recording_url")
+            if call_data.get("start_timestamp"):
+                updates["start_timestamp"] = call_data.get("start_timestamp")
             if call_data.get("end_timestamp"):
                 updates["ended_at"] = datetime.fromtimestamp(
                     call_data["end_timestamp"] / 1000, tz=timezone.utc
                 )
-            await repo.update_contact_status(db, call.contact_id, "completed")
+
+            c_status = "failed" if updates["call_status"] == "error" else "completed"
+            await repo.update_contact_status(db, call.contact_id, c_status)
+
+            # Auto-extract and update contact name if caller name was extracted during the call
+            collected = call_data.get("collected_dynamic_variables") or {}
+            extracted_company = _extract_company_from_data(collected)
+            extracted_name = None
+            for key in ("customer_name", "caller_name", "name", "owner_name", "user_name", "caller", "customer"):
+                val = clean_customer_value(collected.get(key))
+                if val:
+                    extracted_name = val
+                    break
+            if extracted_name or extracted_company:
+                contact = await repo.get_contact(db, call.contact_id)
+                if contact:
+                    kwargs_updates = {}
+                    if extracted_name:
+                        kwargs_updates["name"] = extracted_name
+                    if extracted_company and not contact.company:
+                        kwargs_updates["company"] = extracted_company
+                    if kwargs_updates:
+                        await repo.update_contact(db, contact, **kwargs_updates)
+
         elif event_type in ("transcript_ready",):
             updates["transcript"] = call_data.get("transcript")
         elif event_type in ("recording_ready",):
             updates["recording_url"] = call_data.get("recording_url")
         elif event_type in ("post_call_analysis", "call_analyzed"):
             analysis = call_data.get("call_analysis") or {}
-            updates["summary"] = analysis.get("call_summary")
-            if analysis.get("user_sentiment"):
-                pass
-            if call_data.get("call_status") == "ended":
-                await repo.update_contact_status(
-                    db, call.contact_id, "completed"
-                )
+            summary_text = analysis.get("call_summary", "")
+            updates["summary"] = summary_text
+
+            c_status = "failed" if call_data.get("call_status") == "error" else "completed"
+            await repo.update_contact_status(db, call.contact_id, c_status)
+
+            # Auto-extract and update contact name
+            collected = call_data.get("collected_dynamic_variables") or {}
+            custom = call_data.get("custom_analysis_data") or {}
+            analysis_custom = analysis.get("custom_analysis_data") or {}
+            extracted_company = (
+                _extract_company_from_data(collected, custom, analysis_custom)
+                or _extract_company_from_summary(summary_text)
+            )
+            extracted_name = None
+            for key in ("customer_name", "caller_name", "name", "owner_name", "user_name", "caller", "customer"):
+                val = clean_customer_value(collected.get(key))
+                if val:
+                    extracted_name = val
+                    break
+            if extracted_name or extracted_company:
+                contact = await repo.get_contact(db, call.contact_id)
+                if contact:
+                    kwargs_updates = {}
+                    if extracted_name:
+                        kwargs_updates["name"] = extracted_name
+                    if extracted_company and not contact.company:
+                        kwargs_updates["company"] = extracted_company
+                    if kwargs_updates:
+                        await repo.update_contact(db, contact, **kwargs_updates)
+
+            # ── Auto-detect recall time from call summary ──────────────────
+            if summary_text:
+                recall_dt = parse_recall_time(summary_text)
+                if recall_dt:
+                    contact = await repo.get_contact(db, call.contact_id)
+                    if contact:
+                        await repo.update_contact(db, contact, recall_at=recall_dt)
+                        _logger.info(
+                            "Auto-set recall_at=%s for contact=%s from summary",
+                            recall_dt.isoformat(),
+                            call.contact_id,
+                        )
+
         if updates:
             await repo.update_outbound_call(db, call, **updates)
             _logger.info(
@@ -460,5 +778,101 @@ class OutboundCallingService:
                 retell_call_id,
             )
 
+    # ── Auto-dialer scheduler ────────────────────────────────────────────────
+
+    async def _recall_scheduler_loop(self):
+        """
+        Background loop: every 60 s check for contacts whose recall_at has
+        passed and auto-dial them via their campaign agent.
+        """
+        _logger.info("Recall scheduler started")
+        while True:
+            try:
+                await asyncio.sleep(60)
+                async with AsyncSessionLocal() as db:
+                    due = await repo.get_contacts_due_for_recall(db)
+                    for contact in due:
+                        campaign = contact.campaign
+                        if not campaign:
+                            continue
+                        if contact.status in ("calling",):
+                            continue
+                        try:
+                            # Clear recall_at before dialling so we don't loop
+                            await repo.update_contact(db, contact, recall_at=None)
+                            await self._dial_contact(db, campaign, contact)
+                            _logger.info(
+                                "Auto-recall dialled contact=%s phone=%s",
+                                contact.id,
+                                contact.phone_number,
+                            )
+                        except Exception as exc:
+                            _logger.error(
+                                "Auto-recall dial failed for contact=%s: %s",
+                                contact.id,
+                                exc,
+                            )
+
+                    # Check CallLog for manually set callbacks via frontend
+                    from src.utils.db import CallLog
+                    from sqlalchemy import select
+                    from datetime import timezone
+                    now_utc = datetime.now(timezone.utc)
+                    log_res = await db.execute(
+                        select(CallLog).where(
+                            CallLog.recall_at <= now_utc,
+                            CallLog.call_status.notin_(["ongoing", "calling", "ringing"])
+                        )
+                    )
+                    due_logs = log_res.scalars().all()
+                    for log in due_logs:
+                        if not log.caller_phone:
+                            continue
+                        try:
+                            log.recall_at = None
+                            await db.commit()
+                            
+                            from src.services import retell_service
+                            from src.utils.db_functions import get_agent_settings, build_menu_text
+                            settings = await get_agent_settings(db)
+                            catalogue = await build_menu_text(db)
+                            
+                            dynamic_vars = {
+                                "customer_type": "existing" if log.order_booked else "new",
+                                "customer_phone": log.caller_phone,
+                                "customer_city": "",
+                                "shop_name": log.customer_name_extracted or "",
+                                "owner_name": log.customer_name or log.customer_name_extracted or "",
+                                "last_order": log.order_items if log.order_booked else "",
+                                "product_catalogue": catalogue,
+                                "company_info": settings.restaurant_info or "",
+                                "language_preference": "Urdu"
+                            }
+                            
+                            dynamic_vars["greeting"] = "Assalam-o-Alaikum! Main Mitchell's Fruit Farms se baat kar raha hoon. Kya main aapka thoda waqt le sakta hoon?"
+                            dynamic_vars["begin_message"] = dynamic_vars["greeting"]
+                            
+                            await retell_service.create_phone_call(
+                                to_number=log.caller_phone,
+                                dynamic_variables=dynamic_vars,
+                                metadata={
+                                    "original_call_id": log.call_id,
+                                    "is_callback": "true"
+                                }
+                            )
+                            _logger.info("Auto-recall dialled CallLog call=%s phone=%s", log.call_id, log.caller_phone)
+                        except Exception as exc:
+                            _logger.error("Auto-recall dial failed for CallLog call=%s: %s", log.call_id, exc)
+            except asyncio.CancelledError:
+                _logger.info("Recall scheduler cancelled")
+                break
+            except Exception as exc:
+                _logger.error("Recall scheduler error: %s", exc)
+
 
 outbound_service = OutboundCallingService()
+
+
+def start_recall_scheduler():
+    """Create the background recall-scheduler task. Call once on app startup."""
+    asyncio.create_task(outbound_service._recall_scheduler_loop())

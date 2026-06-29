@@ -8,6 +8,10 @@ import {
   Phone,
   Loader2,
   RefreshCw,
+  Bell,
+  BellOff,
+  Timer,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
@@ -16,10 +20,102 @@ import {
   getOutboundContactsApi,
   addOutboundContactApi,
   deleteOutboundContactApi,
+  updateOutboundContactApi,
   importOutboundContactsApi,
   startOutboundCallApi,
+  setContactRecallApi,
 } from "../../api/api";
 import { C, StatusBadge, Btn, spinStyle } from "./outboundStyles";
+
+// ── Callback countdown (local copy for this page) ─────────────────────────────
+function useCountdown(recallAt) {
+  const [secsLeft, setSecsLeft] = useState(() =>
+    recallAt ? Math.floor((new Date(recallAt) - Date.now()) / 1000) : null
+  );
+  useEffect(() => {
+    if (!recallAt) { setSecsLeft(null); return; }
+    const tick = () => setSecsLeft(Math.floor((new Date(recallAt) - Date.now()) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [recallAt]);
+  return secsLeft;
+}
+function fmtCd(secs) {
+  const abs = Math.abs(secs);
+  const d = Math.floor(abs / 86400), h = Math.floor((abs % 86400) / 3600),
+        m = Math.floor((abs % 3600) / 60), s = abs % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+function ContactCountdown({ recallAt }) {
+  const secs = useCountdown(recallAt);
+  if (secs === null) return <span style={{ color: "#ccc" }}>—</span>;
+  const overdue = secs <= 0, urgent = !overdue && secs < 3600;
+  const color = overdue ? "#DC2626" : urgent ? "#D97706" : "#16A34A";
+  const bg    = overdue ? "#FEF2F2" : urgent ? "#FFFBEB" : "#F0FDF4";
+  const bdr   = overdue ? "#FECACA" : urgent ? "#FDE68A" : "#BBF7D0";
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:".68rem", fontWeight:700,
+      padding:"2px 8px", borderRadius:100, background:bg, color, border:`1px solid ${bdr}`, whiteSpace:"nowrap" }}>
+      <Timer size={9}/>{overdue ? `⚠ ${fmtCd(secs)} ago` : fmtCd(secs)}
+    </span>
+  );
+}
+
+const PRESETS = [
+  { label: "30m", ms: 30*60*1000 },
+  { label: "1h",  ms: 60*60*1000 },
+  { label: "2h",  ms: 2*60*60*1000 },
+  { label: "4h",  ms: 4*60*60*1000 },
+  { label: "Tomorrow", ms: 24*60*60*1000 },
+];
+function ContactCallbackModal({ contact, onClose, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const [customDt, setCustomDt] = useState("");
+  const go = async (iso) => {
+    setSaving(true);
+    try { await setContactRecallApi(contact.id, iso); toast.success("Reminder set!"); onSaved(iso); }
+    catch { toast.error("Failed"); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,15,26,.45)", display:"flex",
+      alignItems:"center", justifyContent:"center", zIndex:9999 }}
+      onMouseDown={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:"#fff", borderRadius:16, padding:"20px 22px", width:320, maxWidth:"92vw",
+        boxShadow:"0 12px 48px rgba(0,0,0,.18)" }} onMouseDown={e=>e.stopPropagation()}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+          <span style={{ fontWeight:800, fontSize:".9rem" }}>Set Callback – {contact.name || contact.phone_number}</span>
+          <button onClick={onClose} style={{ background:"none",border:"none",cursor:"pointer",display:"flex" }}><X size={16}/></button>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7, marginBottom:12 }}>
+          {PRESETS.map(p=><button key={p.label} disabled={saving} onClick={()=>go(new Date(Date.now()+p.ms).toISOString())}
+            style={{ fontWeight:700,fontSize:".72rem",padding:"8px",borderRadius:9,
+              background:"#EEF2FF",border:"1px solid #C7D2FE",color:"#4338CA",cursor:saving?"not-allowed":"pointer" }}>
+            <Timer size={10} style={{marginRight:3}}/>{p.label}</button>)}
+        </div>
+        <form onSubmit={e=>{e.preventDefault();if(customDt)go(new Date(customDt).toISOString());}} style={{display:"flex",gap:6,marginBottom:10}}>
+          <input type="datetime-local" value={customDt} onChange={e=>setCustomDt(e.target.value)} disabled={saving}
+            style={{flex:1,padding:"7px 9px",borderRadius:8,border:"1px solid #E5E7EB",fontSize:".72rem"}}/>
+          <button type="submit" disabled={!customDt||saving}
+            style={{padding:"7px 12px",borderRadius:8,border:"none",background:customDt?"#6366F1":"#9CA3AF",color:"#fff",fontWeight:700,fontSize:".72rem",cursor:customDt&&!saving?"pointer":"not-allowed"}}>Set</button>
+        </form>
+        {contact.recall_at && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 9px",background:"#FEF2F2",borderRadius:8,marginBottom:8}}>
+            <span style={{fontSize:".66rem",color:"#DC2626"}}>Set: {new Date(contact.recall_at).toLocaleString()}</span>
+            <button onClick={()=>go(null)} disabled={saving}
+              style={{background:"none",border:"none",cursor:"pointer",color:"#DC2626",fontSize:".65rem",fontWeight:700,display:"flex",alignItems:"center",gap:3}}>
+              <BellOff size={10}/>Clear</button>
+          </div>
+        )}
+        <button onClick={onClose} style={{width:"100%",padding:"8px",borderRadius:9,border:"1px solid #E5E7EB",background:"#fff",fontWeight:700,fontSize:".72rem",cursor:"pointer"}}>Cancel</button>
+      </div>
+    </div>
+  );
+}
 
 const CSV_IMPORT_FIELDS = [
   {
@@ -48,7 +144,7 @@ const CSV_IMPORT_FIELDS = [
     required: true,
     aliases: "language",
     example: "Urdu",
-    note: "Required. Language for the call (e.g. Urdu, English)",
+    note: "Required. Language for the call (Urdu or English)",
   },
   {
     column: "customer_city",
@@ -105,12 +201,39 @@ export default function CampaignDetail() {
   const [deletingId, setDeletingId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
+  const [callbackModalContact, setCallbackModalContact] = useState(null);
+  const [contactRecalls, setContactRecalls] = useState({});
   const [form, setForm] = useState({
     name: "",
     phone_number: "",
     language_preference: "Urdu",
     company: "",
   });
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingContact, setEditingContact] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    phone_number: "",
+    language_preference: "Urdu",
+    company: "",
+  });
+  const [inlineLang, setInlineLang] = useState({});
+  const [changingLangId, setChangingLangId] = useState(null);
+
+  const changeInlineLang = async (contact) => {
+    const newLang = inlineLang[contact.id] || contact.language_preference || "Urdu";
+    if (newLang === (contact.language_preference || "Urdu")) return;
+    setChangingLangId(contact.id);
+    try {
+      await updateOutboundContactApi(contact.id, { language_preference: newLang });
+      toast.success("Language updated");
+      await fetchAll(true);
+    } catch (err) {
+      toast.error(apiError(err, "Failed to update language"));
+    } finally {
+      setChangingLangId(null);
+    }
+  };
 
   const fetchAll = useCallback(async (silent = false) => {
     if (fetchLock.current) return;
@@ -138,11 +261,12 @@ export default function CampaignDetail() {
     fetchAll(false);
   }, [fetchAll]);
 
+  const hasActiveCall = contacts.some(c => c.status === "calling" || c.status === "ongoing");
   useEffect(() => {
     if (showAdd || savingContact || callingId) return undefined;
-    const interval = setInterval(() => fetchAll(true), 20000);
+    const interval = setInterval(() => fetchAll(true), hasActiveCall ? 4000 : 20000);
     return () => clearInterval(interval);
-  }, [fetchAll, showAdd, savingContact, callingId]);
+  }, [fetchAll, showAdd, savingContact, callingId, hasActiveCall]);
 
   const apiError = (err, fallback) => {
     const detail = err?.response?.data?.detail ?? err;
@@ -204,6 +328,27 @@ export default function CampaignDetail() {
       await fetchAll(true);
     } catch (err) {
       toast.error(apiError(err, "Failed to add contact"));
+    } finally {
+      setSavingContact(false);
+    }
+  };
+
+  const updateContact = async (e) => {
+    e.preventDefault();
+    if (savingContact) return;
+    if (!editForm.phone_number.trim()) {
+      toast.error("Phone number is required");
+      return;
+    }
+    setSavingContact(true);
+    try {
+      await updateOutboundContactApi(editingContact.id, editForm);
+      toast.success("Contact updated");
+      setShowEdit(false);
+      setEditingContact(null);
+      await fetchAll(true);
+    } catch (err) {
+      toast.error(apiError(err, "Failed to update contact"));
     } finally {
       setSavingContact(false);
     }
@@ -413,7 +558,7 @@ export default function CampaignDetail() {
                   </td>
                   <td style={{ padding: "8px 10px" }}>
                     {f.required ? (
-                      <span style={{ color: C.red, fontWeight: 700 }}>Yes</span>
+                      <span style={{ color: C.blue, fontWeight: 700 }}>Yes</span>
                     ) : (
                       <span style={{ color: C.textMuted }}>No</span>
                     )}
@@ -470,7 +615,7 @@ export default function CampaignDetail() {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".82rem" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#FAFBFD" }}>
-              {["Name", "Phone", "Language", "Company", "Status", "Actions"].map((h) => (
+              {["Name", "Phone", "Language", "Company", "Status", "Callback", "Actions"].map((h) => (
                 <th
                   key={h}
                   style={{
@@ -490,7 +635,7 @@ export default function CampaignDetail() {
           <tbody>
             {contacts.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: 32, textAlign: "center", color: C.textMuted }}>
+                <td colSpan={7} style={{ padding: 32, textAlign: "center", color: C.textMuted }}>
                   No contacts yet
                 </td>
               </tr>
@@ -499,10 +644,41 @@ export default function CampaignDetail() {
                 <tr key={ct.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: "12px 16px", fontWeight: 600 }}>{ct.name || "—"}</td>
                   <td style={{ padding: "12px 16px" }}>{ct.phone_number}</td>
-                  <td style={{ padding: "12px 16px", color: C.textMuted }}>{ct.language_preference || "Urdu"}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <select
+                        value={inlineLang[ct.id] || ct.language_preference || "Urdu"}
+                        onChange={(e) => setInlineLang({ ...inlineLang, [ct.id]: e.target.value })}
+                        disabled={changingLangId === ct.id}
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          border: `1px solid ${C.border}`,
+                          fontSize: ".75rem",
+                          backgroundColor: "#fff",
+                        }}
+                      >
+                        <option value="Urdu">Urdu</option>
+                        <option value="English">English</option>
+                      </select>
+                      {(inlineLang[ct.id] && inlineLang[ct.id] !== (ct.language_preference || "Urdu")) && (
+                        <Btn
+                          variant="secondary"
+                          loading={changingLangId === ct.id}
+                          onClick={() => changeInlineLang(ct)}
+                          style={{ padding: "4px 8px", fontSize: ".7rem" }}
+                        >
+                          Change
+                        </Btn>
+                      )}
+                    </div>
+                  </td>
                   <td style={{ padding: "12px 16px", color: C.textMuted }}>{ct.company || "—"}</td>
                   <td style={{ padding: "12px 16px" }}>
                     <StatusBadge status={ct.status} />
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <ContactCountdown recallAt={contactRecalls[ct.id] ?? ct.recall_at} />
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
@@ -517,6 +693,30 @@ export default function CampaignDetail() {
                         style={{ padding: "6px 10px" }}
                       >
                         <Phone size={14} />
+                      </Btn>
+                      <Btn
+                        variant="secondary"
+                        onClick={() => setCallbackModalContact(ct)}
+                        style={{ padding: "6px 10px" }}
+                        title="Set Callback"
+                      >
+                        <Bell size={14} />
+                      </Btn>
+                      <Btn
+                        variant="secondary"
+                        disabled={!!callingId || !!deletingId}
+                        onClick={() => {
+                          setEditingContact(ct);
+                          setEditForm({
+                            name: ct.name || "",
+                            phone_number: ct.phone_number || "",
+                            language_preference: ct.language_preference || "Urdu",
+                            company: ct.company || "",
+                          });
+                          setShowEdit(true);
+                        }}
+                      >
+                        Edit
                       </Btn>
                       <Btn
                         variant="danger"
@@ -534,6 +734,17 @@ export default function CampaignDetail() {
           </tbody>
         </table>
       </div>
+
+      {callbackModalContact && (
+        <ContactCallbackModal
+          contact={{ ...callbackModalContact, recall_at: contactRecalls[callbackModalContact.id] ?? callbackModalContact.recall_at }}
+          onClose={() => setCallbackModalContact(null)}
+          onSaved={(iso) => {
+            setContactRecalls(prev => ({ ...prev, [callbackModalContact.id]: iso }));
+            setCallbackModalContact(null);
+          }}
+        />
+      )}
 
       {showAdd && (
         <div
@@ -556,7 +767,7 @@ export default function CampaignDetail() {
           >
             <h3 style={{ margin: "0 0 16px", fontWeight: 800 }}>Add Contact</h3>
             <form onSubmit={addContact}>
-              {["name", "phone_number", "language_preference", "company"].map((field) => (
+              {["name", "phone_number", "company"].map((field) => (
                 <input
                   key={field}
                   value={form[field]}
@@ -573,6 +784,24 @@ export default function CampaignDetail() {
                   }}
                 />
               ))}
+              <select
+                value={form.language_preference}
+                onChange={(e) => setForm({ ...form, language_preference: e.target.value })}
+                disabled={savingContact}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 10,
+                  border: `1px solid ${C.border}`,
+                  marginBottom: 10,
+                  boxSizing: "border-box",
+                  appearance: "none",
+                  backgroundColor: "#fff"
+                }}
+              >
+                <option value="Urdu">Urdu</option>
+                <option value="English">English</option>
+              </select>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <Btn
                   variant="secondary"
@@ -583,6 +812,79 @@ export default function CampaignDetail() {
                 </Btn>
                 <Btn type="submit" variant="primary" loading={savingContact}>
                   {savingContact ? "Adding…" : "Add"}
+                </Btn>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEdit && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,15,26,.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setShowEdit(false);
+          }}
+        >
+          <div
+            style={{ background: C.card, borderRadius: 14, padding: 24, width: 400, maxWidth: "90vw" }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: "0 0 16px", fontWeight: 800 }}>Edit Contact</h3>
+            <form onSubmit={updateContact}>
+              {["name", "phone_number", "company"].map((field) => (
+                <input
+                  key={field}
+                  value={editForm[field]}
+                  onChange={(e) => setEditForm({ ...editForm, [field]: e.target.value })}
+                  placeholder={field.replace("_", " ")}
+                  disabled={savingContact}
+                  style={{
+                    width: "100%",
+                    padding: 10,
+                    borderRadius: 10,
+                    border: `1px solid ${C.border}`,
+                    marginBottom: 10,
+                    boxSizing: "border-box",
+                  }}
+                />
+              ))}
+              <select
+                value={editForm.language_preference}
+                onChange={(e) => setEditForm({ ...editForm, language_preference: e.target.value })}
+                disabled={savingContact}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 10,
+                  border: `1px solid ${C.border}`,
+                  marginBottom: 10,
+                  boxSizing: "border-box",
+                  appearance: "none",
+                  backgroundColor: "#fff"
+                }}
+              >
+                <option value="Urdu">Urdu</option>
+                <option value="English">English</option>
+              </select>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Btn
+                  variant="secondary"
+                  disabled={savingContact}
+                  onClick={() => setShowEdit(false)}
+                >
+                  Cancel
+                </Btn>
+                <Btn type="submit" variant="primary" loading={savingContact}>
+                  {savingContact ? "Saving…" : "Save"}
                 </Btn>
               </div>
             </form>

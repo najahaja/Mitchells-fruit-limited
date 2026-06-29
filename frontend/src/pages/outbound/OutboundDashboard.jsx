@@ -117,8 +117,7 @@ export default function OutboundDashboard() {
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         {[
-          { label: "Campaigns", path: "/dashboard/calling/outbound/campaigns" },
-          { label: "All Calls", path: "/dashboard/calling/outbound/calls" },
+          { label: "Campaigns", path: "/dashboard/calling/outbound/campaigns" }
         ].map((item) => (
           <Btn key={item.path} variant="primary" onClick={() => navigate(item.path)}>
             {item.label}

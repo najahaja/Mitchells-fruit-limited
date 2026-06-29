@@ -17,6 +17,53 @@ OUTBOUND_META_KEYS = (
     "customer_type",
 )
 
+OWN_COMPANY_MARKERS = (
+    "mitchell",
+    "mitchells",
+    "mitchell's",
+    "fruit farms",
+    "mitchell fruit",
+)
+
+INVALID_CONTACT_VALUES = {
+    "unknown",
+    "n/a",
+    "na",
+    "none",
+    "null",
+    "undefined",
+    "the user",
+    "the customer",
+    "the client",
+    "the distributor",
+    "the retailer",
+    "the agent",
+}
+
+
+def is_own_company_value(value: str | None) -> bool:
+    if not value:
+        return False
+    # Remove apostrophes first, then replace non-alphanumerics with space
+    normalized = re.sub(r"[^a-z0-9]+", " ", value.lower().replace("'", "")).strip()
+    return any(marker.replace("'", "") in normalized for marker in OWN_COMPANY_MARKERS)
+
+
+def clean_customer_value(value: str | None, *, allow_own_company: bool = False) -> str | None:
+    if not value:
+        return None
+    cleaned = re.sub(r"\s+", " ", str(value)).strip(" \t\r\n.,;:-")
+    # Strip common titles
+    cleaned = re.sub(r"^(?:mr\.|mrs\.|ms\.|mr|mrs|ms)\s+", "", cleaned, flags=re.IGNORECASE).strip()
+    
+    if not cleaned:
+        return None
+    if cleaned.lower() in INVALID_CONTACT_VALUES:
+        return None
+    if not allow_own_company and is_own_company_value(cleaned):
+        return None
+    return cleaned
+
 
 def format_last_order(order) -> str:
     if not order:
@@ -53,9 +100,13 @@ def merge_contact_payload(
 ) -> tuple[str | None, str | None, dict | None]:
     meta = dict(metadata or {})
     if shop_name:
-        meta["shop_name"] = shop_name.strip()
+        shop_name_clean = clean_customer_value(shop_name)
+        if shop_name_clean:
+            meta["shop_name"] = shop_name_clean
     if owner_name:
-        meta["owner_name"] = owner_name.strip()
+        owner_name_clean = clean_customer_value(owner_name)
+        if owner_name_clean:
+            meta["owner_name"] = owner_name_clean
     if customer_city:
         meta["customer_city"] = customer_city.strip()
     if last_order:
@@ -64,10 +115,12 @@ def merge_contact_payload(
         ct = customer_type.strip().lower()
         if ct in CUSTOMER_TYPES:
             meta["customer_type"] = ct
-    resolved_name = (owner_name or name or meta.get("owner_name") or "").strip() or None
-    resolved_company = (
-        shop_name or company or meta.get("shop_name") or ""
-    ).strip() or None
+    resolved_name = clean_customer_value(
+        owner_name or name or meta.get("owner_name")
+    )
+    resolved_company = clean_customer_value(
+        shop_name or company or meta.get("shop_name")
+    )
     return resolved_name, resolved_company, meta or None
 
 

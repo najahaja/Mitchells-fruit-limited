@@ -1,9 +1,46 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Eye } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, Timer } from "lucide-react";
 import toast from "react-hot-toast";
 import { getOutboundCallsApi } from "../../api/api";
 import { C, StatusBadge, Btn, formatDuration, spinStyle } from "./outboundStyles";
+
+function useCountdown(recallAt) {
+  const [secsLeft, setSecsLeft] = useState(() =>
+    recallAt ? Math.floor((new Date(recallAt) - Date.now()) / 1000) : null
+  );
+  useEffect(() => {
+    if (!recallAt) { setSecsLeft(null); return; }
+    const tick = () => setSecsLeft(Math.floor((new Date(recallAt) - Date.now()) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [recallAt]);
+  return secsLeft;
+}
+function fmtCd(secs) {
+  const abs = Math.abs(secs);
+  const d = Math.floor(abs / 86400), h = Math.floor((abs % 86400) / 3600),
+        m = Math.floor((abs % 3600) / 60), s = abs % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+function CallCountdown({ recallAt }) {
+  const secs = useCountdown(recallAt);
+  if (secs === null) return <span style={{ color: "#ccc" }}>—</span>;
+  const overdue = secs <= 0, urgent = !overdue && secs < 3600;
+  const color = overdue ? "#DC2626" : urgent ? "#D97706" : "#16A34A";
+  const bg    = overdue ? "#FEF2F2" : urgent ? "#FFFBEB" : "#F0FDF4";
+  const bdr   = overdue ? "#FECACA" : urgent ? "#FDE68A" : "#BBF7D0";
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:3, fontSize:".72rem", fontWeight:700,
+      padding:"3px 9px", borderRadius:100, background:bg, color, border:`1px solid ${bdr}`, whiteSpace:"nowrap" }}>
+      <Timer size={10}/>{overdue ? `⚠ ${fmtCd(secs)} ago` : fmtCd(secs)}
+    </span>
+  );
+}
 
 export default function OutboundCalls() {
   const navigate = useNavigate();
@@ -15,7 +52,7 @@ export default function OutboundCalls() {
     if (fetchLock.current) return;
     fetchLock.current = true;
     try {
-      setCalls(await getOutboundCallsApi(0, 200));
+      setCalls(await getOutboundCallsApi(0, 100));
     } catch {
       if (!silent) toast.error("Failed to load calls");
     } finally {
@@ -62,7 +99,7 @@ export default function OutboundCalls() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: ".82rem" }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#FAFBFD" }}>
-                {["Contact", "Phone", "Campaign", "Status", "Duration", "Date", "Actions"].map((h) => (
+                {["Contact", "Phone", "Campaign", "Status", "Duration", "Callback", "Date", "Actions"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -93,6 +130,9 @@ export default function OutboundCalls() {
                     <StatusBadge status={call.call_status} />
                   </td>
                   <td style={{ padding: "12px 16px" }}>{formatDuration(call.duration)}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <CallCountdown recallAt={call.recall_at} />
+                  </td>
                   <td style={{ padding: "12px 16px", color: C.textMuted }}>
                     {new Date(call.created_at).toLocaleString()}
                   </td>

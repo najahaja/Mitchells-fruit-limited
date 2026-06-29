@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { formatPKR } from "../../utils/currency";
 import {
   Phone,
@@ -25,9 +25,12 @@ import {
   Printer,
   ArrowUp,
   ArrowDown,
-  ArrowUpDown
+  ArrowUpDown,
+  Bell,
+  BellOff,
+  Timer
 } from "lucide-react";
-import { getCallsApi, confirmCallOrderApi, getCategoriesApi, reprintOrderApi, cancelOrderApi, getSettingsApi } from "../../api/api";
+import { getCallsApi, confirmCallOrderApi, getCategoriesApi, reprintOrderApi, cancelOrderApi, getSettingsApi, setCallRecallApi } from "../../api/api";
 import toast from "react-hot-toast";
 import { C } from "../../theme/colors";
 
@@ -82,10 +85,10 @@ function getOrderRevenue(c) {
   return null;
 }
 const SENTIMENT_MAP = {
-  positive: { label: "Positive", color: C.green, bg: C.greenBg, border: C.greenBdr },
+  positive: { label: "Positive", color: C.blue, bg: C.blueBg, border: C.blueBdr },
   neutral: { label: "Neutral", color: C.gold, bg: C.goldBg, border: C.goldBdr },
-  negative: { label: "Frustrated", color: C.red, bg: C.redBg, border: C.redBdr },
-  frustrated: { label: "Frustrated", color: C.red, bg: C.redBg, border: C.redBdr }
+  negative: { label: "Frustrated", color: C.gold, bg: C.goldBg, border: C.goldBdr },
+  frustrated: { label: "Frustrated", color: C.gold, bg: C.goldBg, border: C.goldBdr }
 };
 function getSentiment(c) {
   if (c.call_reason && c.call_reason.toLowerCase().includes("complaint")) {
@@ -101,20 +104,216 @@ function getOutcome(c) {
   if (c.call_status === "ongoing")
     return { label: "Live", color: C.purple, bg: C.purpleBg, border: C.purpleBdr };
   if (hasOrder(c))
-    return { label: "Ordered", color: C.green, bg: C.greenBg, border: C.greenBdr };
+    return { label: "Ordered", color: C.blue, bg: C.blueBg, border: C.blueBdr };
   const reason = c.call_reason?.toLowerCase() || "";
   if (reason.includes("complaint"))
-    return { label: "Complaint", color: C.red, bg: C.redBg, border: C.redBdr };
+    return { label: "Complaint", color: C.blue, bg: C.blueBg, border: C.blueBdr };
   if (reason.includes("callback"))
     return { label: "Callback", color: C.purple, bg: C.purpleBg, border: C.purpleBdr };
   if (reason.includes("trade") || reason.includes("export"))
     return { label: "Inquiry", color: C.purple, bg: C.purpleBg, border: C.purpleBdr };
   if (c.call_successful === false)
-    return { label: "Missed / Failed", color: C.red, bg: C.redBg, border: C.redBdr };
+    return { label: "Missed / Failed", color: C.blue, bg: C.blueBg, border: C.blueBdr };
   if (c.call_successful === true)
     return { label: "Info Given", color: C.gold, bg: C.goldBg, border: C.goldBdr };
   return { label: "Info Given", color: C.gold, bg: C.goldBg, border: C.goldBdr };
 }
+// ── Callback Countdown ────────────────────────────────────────────────────────
+function useCountdown(recallAt) {
+  const [secsLeft, setSecsLeft] = useState(() => {
+    if (!recallAt) return null;
+    return Math.floor((new Date(recallAt) - Date.now()) / 1000);
+  });
+  useEffect(() => {
+    if (!recallAt) { setSecsLeft(null); return; }
+    const tick = () => setSecsLeft(Math.floor((new Date(recallAt) - Date.now()) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [recallAt]);
+  return secsLeft;
+}
+
+function fmtCountdown(secs) {
+  const abs = Math.abs(secs);
+  const d = Math.floor(abs / 86400);
+  const h = Math.floor((abs % 86400) / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  if (d > 0)  return `${d}d ${h}h`;
+  if (h > 0)  return `${h}h ${m}m`;
+  if (m > 0)  return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function CallbackCountdown({ recallAt, compact = false }) {
+  const secs = useCountdown(recallAt);
+  if (secs === null) return <span style={{ color: "rgba(0,0,0,.15)", fontSize: ".72rem" }}>—</span>;
+
+  const overdue = secs <= 0;
+
+  const color  = "#D97706";
+  const bg     = "#FFFBEB";
+  const border = "#FDE68A";
+
+  const label = overdue
+    ? `⚠ ${fmtCountdown(secs)} ago`
+    : fmtCountdown(secs);
+
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 4,
+      fontFamily: "Sora,sans-serif",
+      fontSize: compact ? ".6rem" : ".68rem",
+      fontWeight: 700,
+      padding: compact ? "2px 7px" : "3px 9px",
+      borderRadius: 100,
+      background: bg,
+      color,
+      border: `1px solid ${border}`,
+      whiteSpace: "nowrap",
+      letterSpacing: overdue ? ".01em" : "normal",
+    }}>
+      <Timer size={compact ? 8 : 10} />
+      {label}
+    </span>
+  );
+}
+
+// ── Set-Callback Modal ────────────────────────────────────────────────────────
+const RECALL_PRESETS = [
+  { label: "30 min",   ms: 30 * 60 * 1000 },
+  { label: "1 hour",   ms: 60 * 60 * 1000 },
+  { label: "2 hours",  ms: 2 * 60 * 60 * 1000 },
+  { label: "4 hours",  ms: 4 * 60 * 60 * 1000 },
+  { label: "Tomorrow", ms: 24 * 60 * 60 * 1000 },
+];
+
+function SetCallbackModal({ call, onClose, onSaved }) {
+  const [saving, setSaving] = useState(false);
+  const [customDt, setCustomDt] = useState("");
+
+  const handlePreset = async (ms) => {
+    setSaving(true);
+    try {
+      const iso = new Date(Date.now() + ms).toISOString();
+      await setCallRecallApi(call.call_id, iso);
+      toast.success("Callback reminder set!");
+      onSaved(iso);
+    } catch { toast.error("Failed to set callback"); }
+    finally { setSaving(false); }
+  };
+
+  const handleCustom = async (e) => {
+    e.preventDefault();
+    if (!customDt) return;
+    setSaving(true);
+    try {
+      const iso = new Date(customDt).toISOString();
+      await setCallRecallApi(call.call_id, iso);
+      toast.success("Callback reminder set!");
+      onSaved(iso);
+    } catch { toast.error("Failed to set callback"); }
+    finally { setSaving(false); }
+  };
+
+  const handleClear = async () => {
+    setSaving(true);
+    try {
+      await setCallRecallApi(call.call_id, null);
+      toast.success("Callback reminder cleared");
+      onSaved(null);
+    } catch { toast.error("Failed to clear"); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(15,15,26,.45)",
+      display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+    }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{
+        background: "#fff", borderRadius: 16, padding: "22px 24px",
+        width: 360, maxWidth: "92vw", boxShadow: "0 12px 48px rgba(0,0,0,.18)"
+      }} onMouseDown={e => e.stopPropagation()}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, background: C.purpleBg, border: `1px solid ${C.purpleBdr}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Bell size={14} style={{ color: C.purple }} />
+            </div>
+            <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".88rem", fontWeight: 800, color: C.text }}>Set Callback Reminder</span>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: C.textGhost, display: "flex" }}><X size={16} /></button>
+        </div>
+
+        <p style={{ fontFamily: "Sora,sans-serif", fontSize: ".71rem", color: C.textMuted, margin: "0 0 14px" }}>
+          Choose when to be reminded to call back. The system will auto-dial at the selected time.
+        </p>
+
+        {/* Quick presets */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginBottom: 14 }}>
+          {RECALL_PRESETS.map(p => (
+            <button key={p.label} onClick={() => handlePreset(p.ms)} disabled={saving}
+              style={{
+                fontFamily: "Sora,sans-serif", fontSize: ".72rem", fontWeight: 700,
+                padding: "10px 8px", borderRadius: 10,
+                background: C.purpleBg, border: `1px solid ${C.purpleBdr}`,
+                color: C.purpleText, cursor: saving ? "not-allowed" : "pointer",
+                transition: "opacity .15s",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 5
+              }}>
+              <Timer size={11} />{p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom datetime */}
+        <form onSubmit={handleCustom} style={{ display: "flex", gap: 7, marginBottom: 12 }}>
+          <input
+            type="datetime-local"
+            value={customDt}
+            onChange={e => setCustomDt(e.target.value)}
+            disabled={saving}
+            style={{
+              flex: 1, fontFamily: "Sora,sans-serif", fontSize: ".72rem",
+              padding: "8px 10px", borderRadius: 9,
+              border: `1px solid ${C.border}`, background: C.inputBg, color: C.text,
+              outline: "none"
+            }}
+          />
+          <button type="submit" disabled={!customDt || saving}
+            style={{
+              fontFamily: "Sora,sans-serif", fontSize: ".72rem", fontWeight: 700,
+              padding: "8px 14px", borderRadius: 9, border: "none",
+              background: customDt ? C.purple : C.textGhost, color: "#fff",
+              cursor: customDt && !saving ? "pointer" : "not-allowed"
+            }}>Set</button>
+        </form>
+
+        {call.recall_at && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 10px", background: "#FEF2F2", borderRadius: 9, marginBottom: 10 }}>
+            <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".68rem", color: "#DC2626" }}>
+              Currently set: {new Date(call.recall_at).toLocaleString()}
+            </span>
+            <button onClick={handleClear} disabled={saving}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", display: "flex", alignItems: "center", gap: 3, fontFamily: "Sora,sans-serif", fontSize: ".65rem", fontWeight: 700 }}>
+              <BellOff size={11} /> Clear
+            </button>
+          </div>
+        )}
+
+        <button onClick={onClose} style={{
+          width: "100%", fontFamily: "Sora,sans-serif", fontSize: ".72rem", fontWeight: 700,
+          padding: "9px", borderRadius: 10, border: `1px solid ${C.border}`,
+          background: "#fff", color: C.textSub, cursor: "pointer"
+        }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 function AudioPlayer({ url, duration }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -244,6 +443,8 @@ function DetailPanel({
   onSuccess
 }) {
   const [tab, setTab] = useState("audit");
+  const [showCallbackModal, setShowCallbackModal] = useState(false);
+  const [localRecallAt, setLocalRecallAt] = useState(call.recall_at || null);
   const name = getDisplayName(call);
   const sentiment = getSentiment(call);
   const outcome = getOutcome(call);
@@ -374,7 +575,8 @@ function DetailPanel({
     }
   };
   const handleBlockCaller = () => toast.error(`${call.caller_phone ?? "Number"} added to block list`);
-  return <div
+  return <>
+    <div
     style={{
       width: 420,
       flexShrink: 0,
@@ -495,9 +697,9 @@ function DetailPanel({
       fontWeight: 700,
       padding: "3px 10px",
       borderRadius: 100,
-      background: C.greenBg,
-      color: C.green,
-      border: `1px solid ${C.greenBdr}`
+      background: C.blueBg,
+      color: C.blue,
+      border: `1px solid ${C.blueBdr}`
     }}
   >
             {formatPKR(revenue)}
@@ -569,7 +771,7 @@ function DetailPanel({
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
                   <Activity size={11} style={{ color: C.purple }} />
                   <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".63rem", fontWeight: 700, color: C.purpleText, letterSpacing: ".07em", textTransform: "uppercase" }}>
-                    AI Summary
+                    Call Summary
                   </span>
                 </div>
                 <p style={{ fontFamily: "Sora,sans-serif", fontSize: ".74rem", color: C.textSub, lineHeight: 1.65, margin: 0 }}>
@@ -577,6 +779,27 @@ function DetailPanel({
                 </p>
               </div>}
 
+            {call.customer_feedback && <div
+              style={{
+                background: C.goldBg,
+                border: `1px solid ${C.goldBdr}`,
+                borderRadius: 14,
+                padding: "12px 14px"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+                <MessageSquare size={11} style={{ color: C.gold }} />
+                <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".63rem", fontWeight: 700, color: C.gold, letterSpacing: ".07em", textTransform: "uppercase" }}>
+                  Customer Feedback
+                </span>
+                {call.feedback_rating && <span style={{ marginLeft: "auto", fontFamily: "Sora,sans-serif", fontSize: ".63rem", fontWeight: 800, color: C.gold, background: "rgba(217, 119, 6, 0.1)", padding: "2px 7px", borderRadius: 100, border: `1px solid ${C.goldBdr}` }}>
+                  Rating: {call.feedback_rating} / 5
+                </span>}
+              </div>
+              <p style={{ fontFamily: "Sora,sans-serif", fontSize: ".74rem", color: C.textSub, lineHeight: 1.65, margin: 0 }}>
+                {call.customer_feedback}
+              </p>
+            </div>}
             
             {call.recording_url ? <AudioPlayer url={call.recording_url} duration={call.duration_ms} /> : <div
     style={{
@@ -629,15 +852,15 @@ function DetailPanel({
         height: 22,
         borderRadius: "50%",
         flexShrink: 0,
-        background: isAgent ? C.purpleBg : C.greenBg,
-        border: `1px solid ${isAgent ? C.purpleBdr : C.greenBdr}`,
+        background: isAgent ? C.purpleBg : C.blueBg,
+        border: `1px solid ${isAgent ? C.purpleBdr : C.blueBdr}`,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         fontFamily: "Sora,sans-serif",
         fontSize: ".58rem",
         fontWeight: 800,
-        color: isAgent ? C.purpleText : C.green,
+        color: isAgent ? C.purpleText : C.gold,
         marginTop: 2
       }}
     >
@@ -648,8 +871,8 @@ function DetailPanel({
         maxWidth: "82%",
         padding: "8px 12px",
         borderRadius: isAgent ? "4px 14px 14px 14px" : "14px 4px 14px 14px",
-        background: isAgent ? C.purpleBg : C.greenBg,
-        border: `1px solid ${isAgent ? C.purpleBdr : C.greenBdr}`,
+        background: isAgent ? C.purpleBg : C.blueBg,
+        border: `1px solid ${isAgent ? C.purpleBdr : C.blueBdr}`,
         fontFamily: "Sora,sans-serif",
         fontSize: ".72rem",
         color: C.textSub,
@@ -674,15 +897,15 @@ function DetailPanel({
                 
                 <div
     style={{
-      background: C.greenBg,
-      border: `1px solid ${C.greenBdr}`,
+      background: C.blueBg,
+      border: `1px solid ${C.blueBdr}`,
       borderRadius: 15,
       padding: "14px 16px"
     }}
   >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <ShoppingBag size={13} style={{ color: C.green }} />
+                      <ShoppingBag size={13} style={{ color: C.blue }} />
                       <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".76rem", fontWeight: 800, color: C.text }}>
                         Order #{String(call.order_details.order_id ?? "").slice(-6) || "\u2014"}
                       </span>
@@ -695,9 +918,9 @@ function DetailPanel({
       fontWeight: 700,
       padding: "3px 9px",
       borderRadius: 100,
-      background: call.order_details.status ? C.greenBg : C.redBg,
-      color: call.order_details.status ? C.green : C.red,
-      border: `1px solid ${call.order_details.status ? C.greenBdr : C.redBdr}`
+      background: call.order_details.status ? C.blueBg : C.blueBg,
+      color: call.order_details.status ? C.blue : C.blue,
+      border: `1px solid ${call.order_details.status ? C.blueBdr : C.blueBdr}`
     }}
   >
                       {call.order_details.status ? `Status: ${String(call.order_details.status).toUpperCase()}` : "Status: Needs Review"}
@@ -735,7 +958,7 @@ function DetailPanel({
       gap: 7
     }}
   >
-                    <CheckCircle2 size={11} style={{ color: call.order_details.status ? C.green : C.red, flexShrink: 0 }} />
+                    <CheckCircle2 size={11} style={{ color: call.order_details.status ? C.blue : C.blue, flexShrink: 0 }} />
                     <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".66rem", color: C.textMuted }}>
                       {call.order_details.status ? "Order confirmed successfully" : "Order sync failed — use Force Print to send manually"}
                     </span>
@@ -784,7 +1007,7 @@ function DetailPanel({
                                     · {item.special_instructions}
                                   </p>}
                               </div>
-                              {price > 0 && <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".73rem", fontWeight: 700, color: C.green, flexShrink: 0 }}>
+                              {price > 0 && <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".73rem", fontWeight: 700, color: C.blue, flexShrink: 0 }}>
                                   {formatPKR(price * qty)}
                                 </span>}
                             </div>;
@@ -805,7 +1028,7 @@ function DetailPanel({
                           <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".71rem", color: C.textMuted }}>
                             Order Total
                           </span>
-                          <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".9rem", fontWeight: 800, color: C.green }}>
+                          <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".9rem", fontWeight: 800, color: C.blue }}>
                             {formatPKR(revenue)}
                           </span>
                         </div>}
@@ -936,7 +1159,7 @@ function DetailPanel({
                     <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 11 }}>
                       {extractedItems.map((item, i) => <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
                           <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".72rem", fontWeight: 800, color: C.gold, width: 48, flexShrink: 0 }}>
-                            {item.quantity} kg
+                            {item.quantity} unit{item.quantity !== 1 ? "s" : ""}
                           </span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontFamily: "Sora,sans-serif", fontSize: ".75rem", fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.35 }}>
@@ -1072,9 +1295,9 @@ function DetailPanel({
       fontWeight: 700,
       padding: "9px 12px",
       borderRadius: 11,
-      background: C.redBg,
-      border: `1px solid ${C.redBdr}`,
-      color: C.red,
+      background: C.blueBg,
+      border: `1px solid ${C.blueBdr}`,
+      color: C.blue,
       cursor: "pointer"
     }}
   >
@@ -1123,9 +1346,43 @@ function DetailPanel({
             <Ban size={12} /> Block Caller
           </button>
         </div>
+
+        {/* ── Callback Reminder Row ── */}
+        <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Bell size={11} style={{ color: localRecallAt ? C.purple : C.textGhost }} />
+            <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".62rem", fontWeight: 700, color: C.textGhost, textTransform: "uppercase", letterSpacing: ".06em" }}>Callback</span>
+            {localRecallAt && <CallbackCountdown recallAt={localRecallAt} compact />}
+          </div>
+          <button
+            onClick={() => setShowCallbackModal(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 5,
+              fontFamily: "Sora,sans-serif", fontSize: ".65rem", fontWeight: 700,
+              padding: "5px 10px", borderRadius: 9,
+              background: C.purpleBg, border: `1px solid ${C.purpleBdr}`,
+              color: C.purpleText, cursor: "pointer"
+            }}
+          >
+            <Timer size={10} />{localRecallAt ? "Edit Reminder" : "Set Callback"}
+          </button>
+        </div>
       </div>
-    </div>;
+    </div>
+    {showCallbackModal && (
+      <SetCallbackModal
+        call={{ ...call, recall_at: localRecallAt }}
+        onClose={() => setShowCallbackModal(false)}
+        onSaved={(iso) => {
+          setLocalRecallAt(iso);
+          setShowCallbackModal(false);
+          onSuccess();
+        }}
+      />
+    )}
+  </>;
 }
+
 function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
   const [customerName, setCustomerName] = useState(call.customer_name_extracted || call.customer_name || "");
   const [customerPhone, setCustomerPhone] = useState(call.caller_phone || "");
@@ -1391,7 +1648,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
                 </div>
               </div>
               <div>
-                <label style={{ display: "block", fontFamily: "Sora, sans-serif", fontSize: "0.7rem", fontWeight: 700, color: C.textSub, marginBottom: 5 }}>Kilograms (kg)</label>
+                <label style={{ display: "block", fontFamily: "Sora, sans-serif", fontSize: "0.7rem", fontWeight: 700, color: C.textSub, marginBottom: 5 }}>Quantity (Units)</label>
                 <input
     type="number"
     min={1}
@@ -1433,15 +1690,15 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
                 <ShoppingBag size={20} style={{ color: C.textGhost }} />
                 <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.72rem", color: C.textMuted }}>No items added yet. Choose from dropdown above.</span>
               </div> : <div style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden", background: C.card }}>
-                <div style={{ padding: "10px 14px", background: "#FAFBFD", borderBottom: `1px solid ${C.border}`, display: "grid", gridTemplateColumns: "1fr 70px 70px 70px 30px", alignItems: "center", gap: 8 }}>
+                <div style={{ padding: "10px 14px", background: "#FAFBFD", borderBottom: `1px solid ${C.border}`, display: "grid", gridTemplateColumns: "1fr 70px 90px 80px 30px", alignItems: "center", gap: 8 }}>
                   <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.64rem", fontWeight: 700, color: C.textMuted }}>Item Name</span>
-                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.64rem", fontWeight: 700, color: C.textMuted, textAlign: "center" }}>Kg</span>
-                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.64rem", fontWeight: 700, color: C.textMuted, textAlign: "right" }}>Price</span>
+                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.64rem", fontWeight: 700, color: C.textMuted, textAlign: "center" }}>Units</span>
+                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.64rem", fontWeight: 700, color: C.textMuted, textAlign: "right" }}>Unit Price</span>
                   <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.64rem", fontWeight: 700, color: C.textMuted, textAlign: "right" }}>Total</span>
                   <span />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" }}>
-                  {selectedItems.map((item, idx) => <div key={idx} style={{ padding: "10px 14px", borderBottom: idx === selectedItems.length - 1 ? "none" : `1px solid ${C.borderFaint}`, display: "grid", gridTemplateColumns: "1fr 70px 70px 70px 30px", alignItems: "center", gap: 8 }}>
+                  {selectedItems.map((item, idx) => <div key={idx} style={{ padding: "10px 14px", borderBottom: idx === selectedItems.length - 1 ? "none" : `1px solid ${C.borderFaint}`, display: "grid", gridTemplateColumns: "1fr 70px 90px 80px 30px", alignItems: "center", gap: 8 }}>
                       <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.item}</span>
 
                       <div style={{ display: "flex", justifyContent: "center" }}>
@@ -1455,12 +1712,12 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
                       </div>
 
                       <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.72rem", color: C.textSub, textAlign: "right" }}>{formatPKR(item.price)}</span>
-                      <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.green, textAlign: "right" }}>{formatPKR(item.price * item.quantity)}</span>
+                      <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.74rem", fontWeight: 700, color: C.blue, textAlign: "right" }}>{formatPKR(item.price * item.quantity)}</span>
 
                       <button
     type="button"
     onClick={() => handleRemoveItem(idx)}
-    style={{ background: "none", border: "none", cursor: "pointer", color: C.red, display: "flex", alignItems: "center", justifyContent: "center", padding: 4 }}
+    style={{ background: "none", border: "none", cursor: "pointer", color: C.blue, display: "flex", alignItems: "center", justifyContent: "center", padding: 4 }}
   >
                         ✕
                       </button>
@@ -1470,7 +1727,7 @@ function ReviewOrderModal({ call, menuItems, onClose, onSuccess }) {
                 
                 <div style={{ padding: "12px 14px", background: "#FAFBFD", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.71rem", color: C.textMuted }}>Total Amount</span>
-                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.92rem", fontWeight: 800, color: C.green }}>{formatPKR(totalAmount)}</span>
+                  <span style={{ fontFamily: "Sora, sans-serif", fontSize: "0.92rem", fontWeight: 800, color: C.blue }}>{formatPKR(totalAmount)}</span>
                 </div>
               </div>}
           </div>
@@ -1536,6 +1793,7 @@ function CallsOrders() {
   const [dateFilter, setDateFilter] = useState("all");
   const [outcomeFilter, setOutcomeFilter] = useState("all");
   const [sentimentFilter, setSentimentFilter] = useState("all");
+  const [directionFilter, setDirectionFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [sortField, setSortField] = useState("timestamp");
@@ -1606,6 +1864,11 @@ function CallsOrders() {
     return 0;
   })();
   const filtered = calls.filter((c) => {
+    if (directionFilter !== "all") {
+      const dir = (c.direction || "inbound").toLowerCase();
+      if (directionFilter === "inbound" && dir !== "inbound") return false;
+      if (directionFilter === "outbound" && dir !== "outbound") return false;
+    }
     if (dateFilter !== "all") {
       let callTime = Number(c.start_timestamp);
       if (callTime && callTime < 1000000000000) callTime *= 1000;
@@ -1660,7 +1923,7 @@ function CallsOrders() {
   });
   useEffect(() => {
     setPage(1);
-  }, [search, dateFilter, outcomeFilter, sentimentFilter, sortField, sortDir, pageSize]);
+  }, [search, dateFilter, outcomeFilter, sentimentFilter, directionFilter, sortField, sortDir, pageSize]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
   if (loading) {
@@ -1814,7 +2077,8 @@ function CallsOrders() {
       animation: mounted ? "fadeIn .48s ease both" : "none"
     }}
   >
-          <div
+          <div style={{ display: "flex", width: "100%", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <div
     className="co-search-wrap"
     style={{
       display: "flex",
@@ -1823,92 +2087,74 @@ function CallsOrders() {
       background: "#fff",
       border: `1.5px solid ${C.inputBorder}`,
       borderRadius: 11,
-      padding: "8px 14px",
+      padding: "6px 14px",
+      minWidth: 200,
+      flex: 1,
       boxShadow: "0 1px 6px rgba(0,0,0,.05)",
       transition: "border-color .18s, box-shadow .18s"
     }}
   >
-            <Search size={14} style={{ color: C.textMuted, flexShrink: 0 }} />
-            <input
-    type="text"
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    placeholder="Search by phone, name, or order ID…"
-    style={{
-      flex: 1,
-      fontFamily: "'Sora',sans-serif",
-      fontSize: ".78rem",
-      background: "none",
-      border: "none",
-      outline: "none",
-      color: C.text,
-      letterSpacing: "-.01em"
-    }}
-  />
-            {search ? <button
-    onClick={() => setSearch("")}
-    style={{
-      background: C.inputBg,
-      border: "none",
-      cursor: "pointer",
-      color: C.textMuted,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 0,
-      width: 18,
-      height: 18,
-      borderRadius: "50%",
-      flexShrink: 0
-    }}
-  >
-                <X size={10} />
-              </button> : <span style={{ fontSize: ".62rem", fontFamily: "'Sora',sans-serif", color: C.textGhost, flexShrink: 0, letterSpacing: ".02em" }}>
-                {sorted.length} call{sorted.length !== 1 ? "s" : ""}
-              </span>}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.textGhost, fontFamily: "'Sora',sans-serif", marginRight: 2 }}>Date</span>
-
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <select
-                className="co-select"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+              <Search size={14} style={{ color: C.textMuted, flexShrink: 0 }} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
                 style={{
+                  flex: 1,
                   fontFamily: "'Sora',sans-serif",
-                  fontSize: ".67rem",
-                  fontWeight: 700,
-                  background: "#fff",
-                  border: `1.5px solid ${dateFilter !== "all" ? C.purpleBdr : C.border}`,
-                  borderRadius: 100,
-                  padding: "4px 26px 4px 12px",
-                  color: dateFilter !== "all" ? C.purple : C.textSub,
-                  cursor: "pointer",
-                  appearance: "none",
+                  fontSize: ".78rem",
+                  background: "none",
+                  border: "none",
                   outline: "none",
-                  boxShadow: dateFilter !== "all" ? `0 1px 8px ${C.purpleBdr}` : "none",
-                  transition: "all .15s"
+                  color: C.text,
+                  letterSpacing: "-.01em"
                 }}
-              >
-                <option value="all">All Dates</option>
-                <option value="today">Today</option>
-                <option value="7d">7 Days</option>
-                <option value="30d">1 Month</option>
-              </select>
-              <ChevronDown size={10} style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", color: dateFilter !== "all" ? C.purple : C.textMuted, pointerEvents: "none" }} />
+              />
+              {search ? <button onClick={() => setSearch("")} style={{ background: C.inputBg, border: "none", cursor: "pointer", color: C.textMuted, display: "flex", alignItems: "center", justifyContent: "center", padding: 0, width: 18, height: 18, borderRadius: "50%", flexShrink: 0 }}><X size={10} /></button> : null}
             </div>
 
-            
-            <div style={{ width: 1, height: 18, background: C.border, flexShrink: 0, margin: "0 2px" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.textGhost, fontFamily: "'Sora',sans-serif", marginRight: 2 }}>Date</span>
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <select
+                  className="co-select"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  style={{
+                    fontFamily: "'Sora',sans-serif",
+                    fontSize: ".67rem",
+                    fontWeight: 700,
+                    background: "#fff",
+                    border: `1.5px solid ${dateFilter !== "all" ? C.purpleBdr : C.border}`,
+                    borderRadius: 100,
+                    padding: "4px 26px 4px 12px",
+                    color: dateFilter !== "all" ? C.purple : C.textSub,
+                    cursor: "pointer",
+                    appearance: "none",
+                    outline: "none",
+                    boxShadow: dateFilter !== "all" ? `0 1px 8px ${C.purpleBdr}` : "none",
+                    transition: "all .15s"
+                  }}
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="7d">7 Days</option>
+                  <option value="30d">1 Month</option>
+                </select>
+                <ChevronDown size={10} style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", color: dateFilter !== "all" ? C.purple : C.textMuted, pointerEvents: "none" }} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
 
             
             <span style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.textGhost, fontFamily: "'Sora',sans-serif", marginRight: 2 }}>Outcome</span>
             {["all", "ordered", "info", "complaint", "inquiry", "callback", "missed"].map((o) => {
     const active = outcomeFilter === o;
     const label = o === "all" ? "All" : o === "ordered" ? "Ordered" : o === "info" ? "Info" : o === "complaint" ? "Complaint" : o === "inquiry" ? "Inquiry" : o === "callback" ? "Callback" : "Missed";
-    const dot = o === "ordered" ? C.green : o === "info" ? C.gold : o === "missed" ? C.red : o === "complaint" ? C.red : o === "inquiry" ? C.purple : o === "callback" ? C.purple : C.textMuted;
+    const dot = o === "ordered" ? C.blue : o === "info" ? C.gold : o === "missed" ? C.blue : o === "complaint" ? C.blue : o === "inquiry" ? C.purple : o === "callback" ? C.purple : C.textMuted;
     return <button
       key={o}
       className="co-chip"
@@ -1942,7 +2188,7 @@ function CallsOrders() {
             {["all", "positive", "neutral", "negative"].map((s) => {
     const active = sentimentFilter === s;
     const label = s === "all" ? "All" : s === "positive" ? "Happy" : s === "neutral" ? "Neutral" : "Frustrated";
-    const accent = s === "positive" ? { bg: C.greenBg, bdr: C.greenBdr, txt: C.green } : s === "neutral" ? { bg: C.goldBg, bdr: C.goldBdr, txt: C.gold } : s === "negative" ? { bg: C.redBg, bdr: C.redBdr, txt: C.red } : { bg: C.purpleBg, bdr: C.purpleBdr, txt: C.purple };
+    const accent = s === "positive" ? { bg: C.blueBg, bdr: C.blueBdr, txt: C.blue } : s === "neutral" ? { bg: C.goldBg, bdr: C.goldBdr, txt: C.gold } : s === "negative" ? { bg: C.blueBg, bdr: C.blueBdr, txt: C.blue } : { bg: C.purpleBg, bdr: C.purpleBdr, txt: C.purple };
     return <button
       key={s}
       className="co-chip"
@@ -1965,32 +2211,66 @@ function CallsOrders() {
   })}
 
             
-            {(dateFilter !== "all" || outcomeFilter !== "all" || sentimentFilter !== "all" || search.trim()) && <button
-    className="co-chip"
-    onClick={() => {
-      setDateFilter("all");
-      setOutcomeFilter("all");
-      setSentimentFilter("all");
-      setSearch("");
-    }}
-    style={{
-      fontFamily: "'Sora',sans-serif",
-      fontSize: ".64rem",
-      fontWeight: 700,
-      padding: "4px 11px",
-      borderRadius: 100,
-      marginLeft: "auto",
-      border: `1.5px solid ${C.redBdr}`,
-      background: C.redBg,
-      color: C.red,
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: 5
-    }}
-  >
-                <X size={9} /> Clear filters
-              </button>}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: C.textGhost, fontFamily: "'Sora',sans-serif", marginRight: 2 }}>Call Type</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["all", "inbound", "outbound"].map(d => (
+                <button
+                  key={d}
+                  className="co-chip"
+                  onClick={() => setDirectionFilter(d)}
+                  style={{
+                    fontFamily: "'Sora',sans-serif",
+                    fontSize: ".67rem",
+                    fontWeight: 800,
+                    padding: "6px 16px",
+                    borderRadius: 100,
+                    border: `1.5px solid ${directionFilter === d ? C.purpleBdr : C.border}`,
+                    background: directionFilter === d ? C.purpleBg : "#fff",
+                    color: directionFilter === d ? C.purple : C.textSub,
+                    cursor: "pointer",
+                    textTransform: "capitalize",
+                    boxShadow: directionFilter === d ? `0 1px 8px ${C.purpleBdr}` : "none",
+                    transition: "all .2s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  {d === "all" ? "All Calls" : d === "inbound" ? "Inbound Calls" : "Outbound Calls"}
+                </button>
+              ))}
+            </div>
+
+            {(dateFilter !== "all" || outcomeFilter !== "all" || sentimentFilter !== "all" || directionFilter !== "all" || search.trim()) && <button
+              className="co-chip"
+              onClick={() => {
+                setDateFilter("all");
+                setOutcomeFilter("all");
+                setSentimentFilter("all");
+                setDirectionFilter("all");
+                setSearch("");
+              }}
+              style={{
+                fontFamily: "'Sora',sans-serif",
+                fontSize: ".64rem",
+                fontWeight: 700,
+                padding: "4px 11px",
+                borderRadius: 100,
+                marginLeft: "auto",
+                border: `1.5px solid ${C.blueBdr}`,
+                background: C.blueBg,
+                color: C.blue,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 5
+              }}
+            >
+              <X size={9} /> Clear filters
+            </button>}
           </div>
         </div>
 
@@ -2011,7 +2291,7 @@ function CallsOrders() {
             <div
     style={{
       display: "grid",
-      gridTemplateColumns: selected ? "115px 1fr 120px 70px 100px 78px 28px" : "145px 1fr 148px 88px 115px 98px 32px",
+      gridTemplateColumns: selected ? "110px 60px 1fr 110px 65px 90px 72px 90px 24px" : "140px 80px 1fr 140px 82px 108px 90px 110px 28px",
       padding: "8px 20px",
       borderBottom: `1px solid ${C.border}`,
       background: "#F4F4FA",
@@ -2024,6 +2304,8 @@ function CallsOrders() {
                 Timestamp {sortField === "timestamp" ? sortDir === "asc" ? <ArrowUp size={9} /> : <ArrowDown size={9} /> : <ArrowUpDown size={9} style={{ opacity: 0.4 }} />}
               </button>
               
+              <div style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, color: C.textMuted, letterSpacing: ".08em", textTransform: "uppercase" }}>Type</div>
+
               <div style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, color: C.textMuted, letterSpacing: ".08em", textTransform: "uppercase" }}>Caller</div>
               
               <div style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, color: C.textMuted, letterSpacing: ".08em", textTransform: "uppercase" }}>Outcome</div>
@@ -2037,6 +2319,9 @@ function CallsOrders() {
               <button onClick={() => toggleSort("revenue")} style={{ display: "flex", alignItems: "center", gap: 3, fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, color: sortField === "revenue" ? C.purple : C.textMuted, letterSpacing: ".08em", textTransform: "uppercase", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 Total {sortField === "revenue" ? sortDir === "asc" ? <ArrowUp size={9} /> : <ArrowDown size={9} /> : <ArrowUpDown size={9} style={{ opacity: 0.4 }} />}
               </button>
+              <div style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, color: C.textMuted, letterSpacing: ".08em", textTransform: "uppercase", display: "flex", alignItems: "center", gap: 3 }}>
+                <Timer size={9} /> Callback
+              </div>
               <div />
             </div>
 
@@ -2060,7 +2345,7 @@ function CallsOrders() {
       onClick={() => setSelected(call)}
       style={{
         display: "grid",
-        gridTemplateColumns: selected ? "115px 1fr 120px 70px 100px 78px 28px" : "145px 1fr 148px 88px 115px 98px 32px",
+        gridTemplateColumns: selected ? "110px 60px 1fr 110px 65px 90px 72px 90px 24px" : "140px 80px 1fr 140px 82px 108px 90px 110px 28px",
         padding: "11px 20px",
         borderBottom: `1px solid ${C.borderFaint}`,
         borderLeft: isSelected ? `2px solid ${C.purple}` : "2px solid transparent",
@@ -2077,6 +2362,21 @@ function CallsOrders() {
                         <p style={{ fontFamily: "Sora,sans-serif", fontSize: ".62rem", color: C.textMuted, margin: "1px 0 0" }}>
                           {date}
                         </p>
+                      </div>
+
+                      <div>
+                        <span style={{
+                          fontFamily: "Sora,sans-serif",
+                          fontSize: ".58rem",
+                          fontWeight: 700,
+                          padding: "3px 7px",
+                          borderRadius: 6,
+                          background: (call.direction || "inbound").toLowerCase() === "outbound" ? C.goldBg : C.blueBg,
+                          color: (call.direction || "inbound").toLowerCase() === "outbound" ? C.gold : C.blue,
+                          border: `1px solid ${(call.direction || "inbound").toLowerCase() === "outbound" ? C.goldBdr : C.blueBdr}`
+                        }}>
+                          {(call.direction || "inbound").toLowerCase() === "outbound" ? "Outbound" : "Inbound"}
+                        </span>
                       </div>
 
                       
@@ -2159,11 +2459,16 @@ function CallsOrders() {
 
                       
                       <div>
-                        {revenue !== null ? <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".75rem", fontWeight: 700, color: C.green }}>
+                        {revenue !== null ? <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".75rem", fontWeight: 700, color: C.blue }}>
                             {formatPKR(revenue)}
                           </span> : <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".72rem", color: "rgba(0,0,0,.15)" }}>
                             —
                           </span>}
+                      </div>
+
+                      {/* Callback countdown column */}
+                      <div>
+                        <CallbackCountdown recallAt={call.recall_at} compact />
                       </div>
 
                       

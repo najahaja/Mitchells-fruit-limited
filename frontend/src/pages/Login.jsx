@@ -331,7 +331,7 @@ function SignIn() {
                     height: "34px",
                     borderRadius: "50%",
                     flexShrink: 0,
-                    background: `linear-gradient(135deg,${BRAND.gold},${BRAND.blue})`,
+                    background: BRAND.gold,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

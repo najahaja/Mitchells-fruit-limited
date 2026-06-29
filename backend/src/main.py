@@ -12,11 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from src.utils.db import engine, Base
+from src.utils.db import init_db
 from src.api.auth.router import router as auth_router
 from src.api.retell.router import router as retell_router
 from src.api.settings.router import router as settings_router
 from src.api.menu.router import router as menu_router
 from src.api.outbound.router import router as outbound_router
+from src.api.outbound.service import start_recall_scheduler
 
 
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
@@ -25,8 +27,10 @@ origins = [o.strip() for o in CORS_ORIGINS.split(",")] if CORS_ORIGINS != "*" el
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # 1. Run DDL migrations (create tables + alter columns)
+    await init_db()
+    # 2. Start the background recall/auto-dial scheduler
+    start_recall_scheduler()
     yield
 
 

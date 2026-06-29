@@ -28,7 +28,7 @@ const Complaints = () => {
   const getSeverityBadge = (severity) => {
     const s = (severity || "").toLowerCase();
     if (s.includes("high") || s.includes("severe") || s.includes("critical")) {
-      return { label: severity, color: C.red, bg: C.redBg, border: C.redBdr };
+      return { label: severity, color: C.blue, bg: C.blueBg, border: C.blueBdr };
     }
     return { label: severity || "Standard", color: C.gold, bg: C.goldBg, border: C.goldBdr };
   };

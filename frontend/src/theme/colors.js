@@ -6,9 +6,6 @@ export const BRAND = {
   gold: "#d99f18",
   goldLight: "#e5b954",
   cream: "#FFF9F0",
-  green: "#034ca1",
-  greenBright: "#034ca1",
-  greenLight: "rgba(3,76,161,0.09)",
   textMuted: "rgba(255,255,255,.72)",
 };
 
@@ -36,16 +33,13 @@ export const C = {
   purpleLight: "rgba(3,76,161,0.08)",
   purpleBg: "rgba(3,76,161,0.08)",
   purpleBdr: "rgba(3,76,161,0.18)",
-  green: BRAND.greenBright,
-  greenLight: BRAND.greenLight,
-  greenBg: "rgba(3,76,161,0.08)",
-  greenBdr: "rgba(3,76,161,0.2)",
+  blue: BRAND.blue,
+  blueLight: "rgba(3,76,161,0.09)",
+  blueBg: "rgba(3,76,161,0.08)",
+  blueBdr: "rgba(3,76,161,0.2)",
   gold: BRAND.gold,
   goldBg: "rgba(217,159,24,0.08)",
   goldBdr: "rgba(217,159,24,0.2)",
-  red: "#E54545",
-  redBg: "rgba(229,69,69,0.08)",
-  redBdr: "rgba(229,69,69,0.2)",
   font: "'Sora', sans-serif",
 };
 

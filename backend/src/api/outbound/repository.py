@@ -168,6 +168,19 @@ async def delete_contact(db: AsyncSession, contact_id: str) -> bool:
     return True
 
 
+async def update_contact(
+    db: AsyncSession,
+    contact: OutboundContact,
+    **kwargs,
+) -> OutboundContact:
+    for key, value in kwargs.items():
+        if value is not None and hasattr(contact, key):
+            setattr(contact, key, value)
+    await db.commit()
+    await db.refresh(contact)
+    return contact
+
+
 async def update_contact_status(
     db: AsyncSession,
     contact_id: str,
@@ -213,6 +226,29 @@ async def create_outbound_call(
     db.add(call)
     await db.commit()
     await db.refresh(call)
+
+    # Mirror outbound call to CallLog table so it shows up in Calls & Orders (CallOrder.jsx)
+    if retell_call_id:
+        try:
+            from src.utils.db import CallLog
+            res = await db.execute(select(CallLog).where(CallLog.call_id == retell_call_id))
+            existing_log = res.scalar_one_or_none()
+            if not existing_log:
+                contact = await get_contact(db, contact_id)
+                customer_name = contact.name if contact else None
+                log = CallLog(
+                    call_id=retell_call_id,
+                    caller_phone=phone_number,
+                    customer_name=customer_name,
+                    direction="outbound",
+                    call_status=call_status,
+                    start_timestamp=int(datetime.now(timezone.utc).timestamp() * 1000),
+                )
+                db.add(log)
+                await db.commit()
+        except Exception:
+            pass # Suppress failures to avoid interrupting main dial flow
+
     return call
 
 
@@ -274,6 +310,30 @@ async def update_outbound_call(
             setattr(call, key, value)
     await db.commit()
     await db.refresh(call)
+
+    # Mirror updates to CallLog table
+    if call.retell_call_id:
+        try:
+            from src.utils.db import CallLog
+            res = await db.execute(select(CallLog).where(CallLog.call_id == call.retell_call_id))
+            log = res.scalar_one_or_none()
+            if log:
+                if "call_status" in kwargs:
+                    log.call_status = kwargs["call_status"]
+                if "duration" in kwargs:
+                    log.duration_ms = kwargs["duration"]
+                if "recording_url" in kwargs:
+                    log.recording_url = kwargs["recording_url"]
+                if "transcript" in kwargs:
+                    log.transcript = kwargs["transcript"]
+                if "summary" in kwargs:
+                    log.call_summary = kwargs["summary"]
+                if "start_timestamp" in kwargs:
+                    log.start_timestamp = kwargs["start_timestamp"]
+                await db.commit()
+        except Exception:
+            pass
+
     return call
 
 
@@ -325,3 +385,34 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
         "active_calls": active_calls.scalar() or 0,
         "completed_calls": completed_calls.scalar() or 0,
     }
+
+
+async def get_contacts_due_for_recall(
+    db: AsyncSession,
+) -> list[OutboundContact]:
+    """Return outbound contacts whose recall_at has passed and are ready to call again."""
+    now = datetime.now(timezone.utc)
+    result = await db.execute(
+        select(OutboundContact)
+        .where(
+            OutboundContact.recall_at <= now,
+            OutboundContact.status.notin_(["calling", "pending"]),
+        )
+        .options(selectinload(OutboundContact.campaign))
+        .order_by(OutboundContact.recall_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_latest_call_for_contact(
+    db: AsyncSession,
+    contact_id: str,
+) -> OutboundCall | None:
+    """Get the most recent outbound call log for a specific contact."""
+    result = await db.execute(
+        select(OutboundCall)
+        .where(OutboundCall.contact_id == contact_id)
+        .order_by(OutboundCall.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()

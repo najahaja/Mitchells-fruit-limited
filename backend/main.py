@@ -26,6 +26,7 @@ from src.api.settings.router import router as settings_router
 from src.api.menu.router import router as menu_router
 from src.api.prompts.router import router as prompts_router
 from src.api.outbound.router import router as outbound_router
+from src.api.outbound.service import start_recall_scheduler
 
 # 2. CORS (Cross-Origin Resource Sharing) CONFIGURATION
 # Allowed origins represents which frontends/websites are allowed to make requests
@@ -87,6 +88,9 @@ async def lifespan(app: FastAPI):
     
     # 2. Launch the Clover sync loop as a non-blocking background task in asyncio
     sync_task = asyncio.create_task(_clover_menu_sync_loop())
+
+    # 3. Launch the recall/callback auto-dialer scheduler
+    start_recall_scheduler()
     
     yield  # Server runs and handles requests here...
     

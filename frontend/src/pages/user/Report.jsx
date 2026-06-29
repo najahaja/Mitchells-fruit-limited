@@ -176,7 +176,7 @@ function DonutChart({
         <text x={cx} y={cy + 5} textAnchor="middle" fontSize="14" fontWeight="800" fill={C.text}>{total}</text>
         <text x={cx} y={cy + 17} textAnchor="middle" fontSize="8" fill={C.textMuted}>{centerLabel ?? "total"}</text>
       </svg>
-      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9, flex: 1 }}>
         {arcs.map((a) => <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: a.color, flexShrink: 0, display: "block" }} />
             <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, color: C.textSub, flex: 1 }}>{a.label}</span>
@@ -302,9 +302,9 @@ function Report() {
   const totalCallers = s.new_callers + s.repeat_callers;
   const returnRate = totalCallers > 0 ? Math.round(s.repeat_callers / totalCallers * 100) : 0;
   const avgMin = s.total_calls > 0 ? (s.total_minutes / s.total_calls).toFixed(1) : "0";
-  const successColor = successRate >= 80 ? C.green : successRate >= 55 ? C.gold : C.red;
-  const successBg = successRate >= 80 ? C.greenBg : successRate >= 55 ? C.goldBg : C.redBg;
-  const successBdr = successRate >= 80 ? C.greenBdr : successRate >= 55 ? C.goldBdr : C.redBdr;
+  const successColor = successRate >= 80 ? C.blue : successRate >= 55 ? C.gold : C.blue;
+  const successBg = successRate >= 80 ? C.blueBg : successRate >= 55 ? C.goldBg : C.blueBg;
+  const successBdr = successRate >= 80 ? C.blueBdr : successRate >= 55 ? C.goldBdr : C.blueBdr;
   return <div style={{ fontFamily: "'Sora',sans-serif", WebkitFontSmoothing: "antialiased", display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", background: C.pageBg }}>
       <style>{`
         @keyframes spin  { to { transform: rotate(360deg); } }
@@ -386,9 +386,9 @@ function Report() {
     label="Missed / Failed"
     value={failedCalls}
     icon={<PhoneCall size={15} />}
-    color={failedCalls > 0 ? C.red : C.textSub}
-    bg={failedCalls > 0 ? C.redBg : C.inputBg}
-    bdr={failedCalls > 0 ? C.redBdr : C.border}
+    color={failedCalls > 0 ? C.blue : C.textSub}
+    bg={failedCalls > 0 ? C.blueBg : C.inputBg}
+    bdr={failedCalls > 0 ? C.blueBdr : C.border}
     delay={0.04}
     sub={failedCalls > 0 ? `of ${s.total_calls} total` : "none missed"}
   />
@@ -396,9 +396,9 @@ function Report() {
     label="Orders Received"
     value={s.total_orders}
     icon={<ShoppingBag size={15} />}
-    color={C.green}
-    bg={C.greenBg}
-    bdr={C.greenBdr}
+    color={C.blue}
+    bg={C.blueBg}
+    bdr={C.blueBdr}
     delay={0.08}
     sub={`${convRate}% of calls`}
   />
@@ -416,9 +416,9 @@ function Report() {
     label="Conversion Rate"
     value={`${convRate}%`}
     icon={<TrendingUp size={15} />}
-    color={C.gold}
-    bg={C.goldBg}
-    bdr={C.goldBdr}
+    color={C.blue}
+    bg={C.blueBg}
+    bdr={C.blueBdr}
     delay={0.16}
     sub="calls → orders"
   />
@@ -426,9 +426,9 @@ function Report() {
     label="AI Minutes"
     value={s.total_minutes.toFixed(0)}
     icon={<Clock size={15} />}
-    color={C.textSub}
-    bg={C.inputBg}
-    bdr={C.border}
+    color={C.blue}
+    bg={C.blueBg}
+    bdr={C.blueBdr}
     delay={0.2}
     sub={`~${avgMin} min / call`}
   />
@@ -436,9 +436,9 @@ function Report() {
     label="Return Rate"
     value={`${returnRate}%`}
     icon={<Star size={15} />}
-    color={returnRate >= 30 ? C.green : C.textSub}
-    bg={returnRate >= 30 ? C.greenBg : C.inputBg}
-    bdr={returnRate >= 30 ? C.greenBdr : C.border}
+    color={returnRate >= 30 ? C.blue : C.textSub}
+    bg={returnRate >= 30 ? C.blueBg : C.inputBg}
+    bdr={returnRate >= 30 ? C.blueBdr : C.border}
     delay={0.24}
     sub={`${s.repeat_callers} repeat callers`}
   />
@@ -451,11 +451,11 @@ function Report() {
           </div>
           <div className="rp-card">
             <SectionHeader icon={<ShoppingBag size={14} />} title="Orders Over Time" sub={`${data.orders_over_time.reduce((a, d) => a + d.orders, 0)} total`} />
-            <LineChart color={C.green} label="orders" data={data.orders_over_time.map((d) => ({ date: d.date, value: d.orders }))} />
+            <LineChart color={C.blue} label="orders" data={data.orders_over_time.map((d) => ({ date: d.date, value: d.orders }))} />
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14, animation: "fadeUp .4s .28s both" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, animation: "fadeUp .4s .28s both" }}>
 
           
           <div className="rp-card">
@@ -463,10 +463,10 @@ function Report() {
             <div style={{ display: "flex", gap: 12, justifyContent: "space-around", marginBottom: 16 }}>
               <RingProgress pct={successRate} color={successColor} label="Success" value={`${successRate}%`} />
               <RingProgress pct={convRate} color={C.purple} label="Conversion" value={`${convRate}%`} />
-              <RingProgress pct={returnRate} color={C.gold} label="Return" value={`${returnRate}%`} />
+              <RingProgress pct={returnRate} color={C.blue} label="Return" value={`${returnRate}%`} />
             </div>
-            <StatRow label="Successful" value={s.successful_calls} color={C.green} />
-            <StatRow label="Failed / Missed" value={failedCalls} color={failedCalls > 0 ? C.red : C.textMuted} />
+            <StatRow label="Successful" value={s.successful_calls} color={C.blue} />
+            <StatRow label="Failed / Missed" value={failedCalls} color={failedCalls > 0 ? C.blue : C.textMuted} />
             <StatRow label="Total Calls" value={s.total_calls} />
             <StatRow label="Avg Duration" value={`${avgMin} min`} />
           </div>
@@ -476,7 +476,7 @@ function Report() {
             <SectionHeader icon={<Star size={14} />} title="Caller Sentiment" />
             {Object.keys(data.sentiment_breakdown).length > 0 ? <DonutChart
     data={data.sentiment_breakdown}
-    colors={{ Positive: C.green, Happy: C.green, Neutral: "#94a3b8", Negative: C.red, Frustrated: C.red }}
+    colors={{ Positive: C.blue, Happy: C.blue, Neutral: "#94a3b8", Negative: C.blue, Frustrated: C.blue }}
     centerLabel="calls"
   /> : <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, color: C.textMuted, textAlign: "center", padding: "28px 0" }}>
                 No sentiment data yet
@@ -488,7 +488,7 @@ function Report() {
             <SectionHeader icon={<ShoppingBag size={14} />} title="Order Types" />
             <HBar items={[
     { label: "Pickup", value: s.order_type_distribution.pickup, total: s.total_orders, color: C.purple, icon: <Store size={12} /> },
-    { label: "Delivery", value: s.order_type_distribution.delivery, total: s.total_orders, color: C.green, icon: <Truck size={12} /> }
+    { label: "Delivery", value: s.order_type_distribution.delivery, total: s.total_orders, color: C.blue, icon: <Truck size={12} /> }
   ]} />
             <div style={{ marginTop: 18 }}>
               <StatRow label="Total Orders" value={s.total_orders} />
@@ -497,23 +497,28 @@ function Report() {
           </div>
 
           
-          <div className="rp-card">
-            <SectionHeader icon={<Users size={14} />} title="Customer Mix" />
-            {totalCallers > 0 ? <DonutChart
+          <div className="rp-card" style={{ gridColumn: "1 / -1", display: "flex", gap: 32, alignItems: "flex-start" }}>
+            <div style={{ flexShrink: 0 }}>
+              <SectionHeader icon={<Users size={14} />} title="Customer Mix" />
+              {totalCallers > 0 ? <DonutChart
     data={{ "New": s.new_callers, "Returning": s.repeat_callers }}
-    colors={{ New: C.purple, Returning: C.green }}
+    colors={{ New: C.purple, Returning: C.blue }}
     centerLabel="callers"
   /> : <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, color: C.textMuted, textAlign: "center", padding: "28px 0" }}>
-                No caller data yet
-              </p>}
-            <div style={{ marginTop: 18 }}>
+                  No caller data yet
+                </p>}
+            </div>
+            <div style={{ flex: 1, paddingTop: 4 }}>
+              <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: ".07em", margin: "0 0 8px" }}>Breakdown</p>
               <StatRow label="New Callers" value={s.new_callers} color={C.purple} />
-              <StatRow label="Returning" value={s.repeat_callers} color={C.green} />
-              <StatRow label="Return Rate" value={`${returnRate}%`} color={returnRate >= 30 ? C.green : C.textMuted} />
+              <StatRow label="Returning Callers" value={s.repeat_callers} color={C.blue} />
+              <StatRow label="Return Rate" value={`${returnRate}%`} color={returnRate >= 30 ? C.blue : C.textMuted} />
+              <StatRow label="Total Unique Callers" value={totalCallers} />
             </div>
           </div>
 
         </div>
+
 
         {data.top_repeat_callers.length > 0 && <div className="rp-card" style={{ animation: "fadeUp .4s .38s both" }}>
             <SectionHeader
@@ -548,13 +553,13 @@ function Report() {
     height: 32,
     borderRadius: "50%",
     flexShrink: 0,
-    background: i === 0 ? C.goldBg : i === 1 ? C.purpleBg : i === 2 ? C.greenBg : C.inputBg,
-    border: `1.5px solid ${i === 0 ? C.goldBdr : i === 1 ? C.purpleBdr : i === 2 ? C.greenBdr : C.border}`,
+    background: i === 0 ? C.purpleBg : i === 1 ? C.purpleBg : i === 2 ? C.blueBg : C.inputBg,
+    border: `1.5px solid ${i === 0 ? C.purpleBdr : i === 1 ? C.purpleBdr : i === 2 ? C.blueBdr : C.border}`,
     display: "flex",
     alignItems: "center",
     justifyContent: "center"
   }}>
-                    <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 11, fontWeight: 800, color: i === 0 ? C.gold : i === 1 ? C.purple : i === 2 ? C.green : C.textMuted }}>
+                    <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 11, fontWeight: 800, color: i === 0 ? C.purple : i === 1 ? C.purple : i === 2 ? C.blue : C.textMuted }}>
                       {i + 1}
                     </span>
                   </div>

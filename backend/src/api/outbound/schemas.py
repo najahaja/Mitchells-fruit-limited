@@ -43,6 +43,14 @@ class ContactCreate(BaseModel):
     customer_type: str | None = None
 
 
+class ContactUpdate(BaseModel):
+    name: str | None = None
+    phone_number: str | None = None
+    language_preference: str | None = None
+    company: str | None = None
+    recall_at: datetime | None = None
+
+
 class ContactResponse(BaseModel):
     id: str
     campaign_id: str
@@ -52,6 +60,7 @@ class ContactResponse(BaseModel):
     company: str | None
     metadata: dict | None = Field(None, validation_alias="contact_metadata")
     status: str
+    recall_at: datetime | None = None
     created_at: datetime
 
     class Config:
@@ -98,6 +107,7 @@ class CallResponse(BaseModel):
     created_at: datetime
     contact_name: str | None = None
     campaign_name: str | None = None
+    recall_at: datetime | None = None
 
     class Config:
         from_attributes = True

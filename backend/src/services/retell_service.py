@@ -26,7 +26,8 @@ LOCKED_PROMPT_TAIL = (
     "- {{kitchen_is_open}} — 'true' if the Mitchell's warehouse/fulfillment center is currently open and accepting orders, 'false' if not\n"
     "- {{store_is_open}} — 'true' if the Mitchell's corporate/sales offices are currently open, 'false' if closed\n"
     "- {{menu}} — the complete catalog of Mitchell's products (jams, squashes, ketchups, confectionery, etc.) with available stock, pricing, and active deals. This is your ONLY source of truth for product availability and pricing. Never reference products not listed in {{menu}}.\n"
-    "- {{restaurant_info}} — general information about Mitchell's Fruit Farms, its history, specialties, and policies."
+    "- {{restaurant_info}} — general information about Mitchell's Fruit Farms, its history, specialties, and policies.\n"
+    "- {{language_preference}} — the customer's preferred language ('Urdu' or 'English'). If 'Urdu', you must greet, speak, and respond entirely in Urdu (using Roman Urdu script / text representation if required by the voice model). If 'English', speak entirely in English."
 )
 
 
@@ -127,11 +128,11 @@ async def get_agent() -> dict:
         return response.json()
 
 
-async def get_conversation_flow() -> dict:
+async def get_conversation_flow(override_flow_id: str = None) -> dict:
     """
     Queries Retell details for our configured conversation flow chart graphs.
     """
-    flow_id = os.getenv("RETELL_CONVERSATION_FLOW_ID", "")
+    flow_id = override_flow_id or os.getenv("RETELL_CONVERSATION_FLOW_ID", "")
     async with httpx.AsyncClient() as client:
         response = await client.get(
             f"{BASE_URL}/get-conversation-flow/{flow_id}",
@@ -141,7 +142,7 @@ async def get_conversation_flow() -> dict:
         return response.json()
 
 
-async def update_conversation_flow(payload: dict) -> dict:
+async def update_conversation_flow(payload: dict, override_flow_id: str = None) -> dict:
     """
     Updates the agent's prompts and conversation graph configuration on Retell.
     
@@ -150,7 +151,7 @@ async def update_conversation_flow(payload: dict) -> dict:
     graph list, locate the specific nodes by ID, and update their individual prompt
     instructions, while preserving all other node attributes.
     """
-    flow_id = os.getenv("RETELL_CONVERSATION_FLOW_ID", "")
+    flow_id = override_flow_id or os.getenv("RETELL_CONVERSATION_FLOW_ID", "")
     patch_body: dict = {}
     
     # 1. Mount standard configurations
@@ -169,7 +170,7 @@ async def update_conversation_flow(payload: dict) -> dict:
         
     # 2. Handle sub-node diagram updates if present
     if "nodes" in payload and payload["nodes"]:
-        current = await get_conversation_flow()
+        current = await get_conversation_flow(override_flow_id=override_flow_id)
         existing_nodes = {n["id"]: n for n in current.get("nodes", [])}
         
         for updated_node in payload["nodes"]:
@@ -192,11 +193,11 @@ async def update_conversation_flow(payload: dict) -> dict:
         return response.json()
 
 
-async def update_agent_voice_settings(**kwargs) -> dict:
+async def update_agent_voice_settings(override_agent_id: str = None, **kwargs) -> dict:
     """
     Updates the physical voice parameters of the agent (e.g. speed, responsiveness).
     """
-    agent_id = os.getenv("RETELL_AGENT_ID", "")
+    agent_id = override_agent_id or os.getenv("RETELL_AGENT_ID", "")
     payload = {k: v for k, v in kwargs.items() if v is not None}
     async with httpx.AsyncClient() as client:
         response = await client.patch(

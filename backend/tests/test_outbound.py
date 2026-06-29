@@ -1,6 +1,7 @@
 import pytest
 
 from src.api.outbound.utils import (
+    clean_customer_value,
     validate_phone_number,
     normalize_phone_number,
     parse_csv_contacts,
@@ -50,6 +51,23 @@ def test_merge_contact_payload():
     assert company == "Ali Store"
     assert meta["customer_city"] == "Lahore"
     assert meta["customer_type"] == "existing"
+
+
+def test_clean_customer_value_rejects_own_company():
+    assert clean_customer_value("Mitchell's Fruit Farms") is None
+    assert clean_customer_value("Mitchells") is None
+    assert clean_customer_value("Fresh Mart") == "Fresh Mart"
+
+
+def test_merge_contact_payload_rejects_own_company_as_customer():
+    name, company, meta = merge_contact_payload(
+        shop_name="Mitchell's Fruit Farms",
+        owner_name="Mitchells",
+        customer_city="Lahore",
+    )
+    assert name is None
+    assert company is None
+    assert meta["customer_city"] == "Lahore"
 
 
 def test_parse_csv_with_outbound_columns():

@@ -285,18 +285,22 @@ async def patch_settings(
     prompt_instructions = updates.get("prompt_instructions")
     settings = await update_agent_settings(db, **updates)
     if voice_updates:
-        try:
-            logger.warning("Sending to Retell update-agent: %s", voice_updates)
-            result = await retell_service.update_agent_voice_settings(**voice_updates)
-            logger.warning("Retell update-agent response: %s", result)
-        except Exception as e:
-            logger.error("Failed to sync voice settings to Retell: %s", e)
+        for agent_id in (os.getenv("RETELL_AGENT_ID"), os.getenv("RETELL_OUTBOUND_AGENT_ID")):
+            if not agent_id: continue
+            try:
+                logger.warning("Sending to Retell update-agent %s: %s", agent_id, voice_updates)
+                result = await retell_service.update_agent_voice_settings(override_agent_id=agent_id, **voice_updates)
+                logger.warning("Retell update-agent %s response: %s", agent_id, result)
+            except Exception as e:
+                logger.error("Failed to sync voice settings to Retell agent %s: %s", agent_id, e)
     if prompt_instructions is not None:
-        try:
-            full_prompt = retell_service.assemble_global_prompt(prompt_instructions)
-            await retell_service.update_conversation_flow({"global_prompt": full_prompt})
-        except Exception as e:
-            logger.error("Failed to sync prompt to Retell: %s", e)
+        full_prompt = retell_service.assemble_global_prompt(prompt_instructions)
+        for flow_id in (os.getenv("RETELL_CONVERSATION_FLOW_ID"), os.getenv("RETELL_OUTBOUND_CONVERSATION_FLOW_ID")):
+            if not flow_id: continue
+            try:
+                await retell_service.update_conversation_flow({"global_prompt": full_prompt}, override_flow_id=flow_id)
+            except Exception as e:
+                logger.error("Failed to sync prompt to Retell flow %s: %s", flow_id, e)
     return AgentSettingsResponse.model_validate(settings)
 
 

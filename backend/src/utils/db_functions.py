@@ -252,12 +252,54 @@ async def get_combined_stats(db: AsyncSession) -> dict:
     failed_calls = await db.scalar(select(func.count()).select_from(CallLog).where(CallLog.call_successful == False)) or 0
     pending_calls = await db.scalar(select(func.count()).select_from(CallLog).where(CallLog.call_successful == None)) or 0
     order_stats = await get_order_stats(db)
+
+    # Compute today's calls in the restaurant's local timezone (Asia/Karachi)
+    try:
+        from zoneinfo import ZoneInfo
+        settings_row = await db.execute(select(AgentSettings).limit(1))
+        _settings = settings_row.scalar_one_or_none()
+        tz_name = (_settings.restaurant_timezone if _settings else None) or "Asia/Karachi"
+        tz = ZoneInfo(tz_name)
+    except Exception:
+        from datetime import timezone as _tz
+        tz = _tz.utc
+
+    now_local = datetime.now(tz)
+    today_local_start = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_local_end = today_local_start + timedelta(days=1)
+    today_utc_start = today_local_start.astimezone(timezone.utc)
+    today_utc_end = today_local_end.astimezone(timezone.utc)
+
+    today_calls = await db.scalar(
+        select(func.count()).select_from(CallLog).where(
+            CallLog.created_at >= today_utc_start,
+            CallLog.created_at < today_utc_end,
+        )
+    ) or 0
+    today_inbound_calls = await db.scalar(
+        select(func.count()).select_from(CallLog).where(
+            CallLog.created_at >= today_utc_start,
+            CallLog.created_at < today_utc_end,
+            func.lower(CallLog.direction) == "inbound",
+        )
+    ) or 0
+    today_outbound_calls = await db.scalar(
+        select(func.count()).select_from(CallLog).where(
+            CallLog.created_at >= today_utc_start,
+            CallLog.created_at < today_utc_end,
+            func.lower(CallLog.direction) == "outbound",
+        )
+    ) or 0
+
     return {
         "calls": {
             "total": total_calls,
             "successful": successful_calls,
             "failed": failed_calls,
             "pending": pending_calls,
+            "today": today_calls,
+            "today_inbound": today_inbound_calls,
+            "today_outbound": today_outbound_calls,
         },
         "orders": order_stats,
     }
@@ -670,18 +712,7 @@ async def get_order_stats(db: AsyncSession) -> dict:
     To count "today's orders", we must look at the user's timezone settings
     to determine the correct local day boundary (which is different from UTC day start).
     """
-    # subquery to fetch all call IDs linked to an order
-    orders_subquery = select(Order.call_id).where(Order.call_id.isnot(None)).subquery()
-    
-    # Count call logs that were booked but don't have an order linked yet (drafts/mock orders)
-    unlinked_booked_total = await db.scalar(
-        select(func.count()).select_from(CallLog).where(
-            CallLog.order_booked == True,
-            CallLog.call_id.not_in(orders_subquery)
-        )
-    ) or 0
-
-    total = (await db.scalar(select(func.count()).select_from(Order)) or 0) + unlinked_booked_total
+    total = await db.scalar(select(func.count()).select_from(Order)) or 0
     received = await db.scalar(select(func.count()).select_from(Order).where(Order.status == "received")) or 0
     preparing = await db.scalar(select(func.count()).select_from(Order).where(Order.status == "preparing")) or 0
     ready = await db.scalar(select(func.count()).select_from(Order).where(Order.status == "ready")) or 0
@@ -714,24 +745,35 @@ async def get_order_stats(db: AsyncSession) -> dict:
         )
     ) or 0
 
-    today_unlinked_booked_count = await db.scalar(
-        select(func.count()).select_from(CallLog).where(
-            CallLog.created_at >= today_utc_start,
-            CallLog.created_at < today_utc_end,
-            CallLog.order_booked == True,
-            CallLog.call_id.not_in(orders_subquery)
+    today_inbound_orders = await db.scalar(
+        select(func.count()).select_from(Order)
+        .join(CallLog, Order.call_id == CallLog.call_id)
+        .where(
+            Order.created_at >= today_utc_start,
+            Order.created_at < today_utc_end,
+            func.lower(CallLog.direction) == "inbound",
+        )
+    ) or 0
+    today_outbound_orders = await db.scalar(
+        select(func.count()).select_from(Order)
+        .join(CallLog, Order.call_id == CallLog.call_id)
+        .where(
+            Order.created_at >= today_utc_start,
+            Order.created_at < today_utc_end,
+            func.lower(CallLog.direction) == "outbound",
         )
     ) or 0
 
-    today_count = today_orders_count + today_unlinked_booked_count
     return {
         "total": total,
-        "received": received + unlinked_booked_total,
+        "received": received,
         "preparing": preparing,
         "ready": ready,
         "completed": completed,
         "cancelled": cancelled,
-        "today": today_count,
+        "today": today_orders_count,
+        "today_inbound": today_inbound_orders,
+        "today_outbound": today_outbound_orders,
     }
 
 
@@ -1301,7 +1343,7 @@ async def auto_extract_order_items(
 
         # Step D: Extract Quantity
         # 1. Search for quantity before item name (e.g. "3 Mango Jam" or "2 packs of Lemon Squash")
-        m = re.search(r"(\d+)\s*(?:x|packs?|bags?|cases?|units?|bottles?|jars?|cartons?|tins?)?\s*" + escaped, combined)
+        m = re.search(r"(\d+)\s*(?:x|packs?|bags?|cases?|units?|bottles?|jars?|cartons?|tins?|boxes?|cans?)?\s*(?:of\s+)?(?:\b(?:the|a|an)\s+)?" + escaped, combined)
         if m:
             qty = int(m.group(1))
         else:

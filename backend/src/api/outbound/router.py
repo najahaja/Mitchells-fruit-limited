@@ -10,6 +10,7 @@ from src.api.outbound.schemas import (
     CampaignUpdate,
     CampaignResponse,
     ContactCreate,
+    ContactUpdate,
     ContactResponse,
     ContactImportRequest,
     StartCallRequest,
@@ -19,6 +20,8 @@ from src.api.outbound.schemas import (
     WebhookResponse,
 )
 from src.api.outbound.utils import parse_csv_contacts, parse_json_contacts
+from datetime import datetime
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/outbound", tags=["outbound"])
 
@@ -33,6 +36,7 @@ def _contact_response(contact) -> ContactResponse:
         company=contact.company,
         contact_metadata=contact.contact_metadata,
         status=contact.status,
+        recall_at=contact.recall_at,
         created_at=contact.created_at,
     )
 
@@ -54,6 +58,7 @@ def _call_response(call) -> CallResponse:
         created_at=call.created_at,
         contact_name=call.contact.name if call.contact else None,
         campaign_name=call.campaign.name if call.campaign else None,
+        recall_at=getattr(call.contact, "recall_at", None) if call.contact else None,
     )
 
 
@@ -226,6 +231,17 @@ async def list_contacts(
     if not campaign:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
     contacts = await repo.list_contacts(db, campaign_id, skip, limit)
+    
+    # Auto-sync contacts stuck in 'calling' status
+    for contact in contacts:
+        if contact.status == "calling":
+            latest_call = await repo.get_latest_call_for_contact(db, contact.id)
+            if latest_call:
+                try:
+                    await outbound_service.sync_call_status(db, latest_call.id)
+                except Exception:
+                    pass # Keep going if Retell API is temporarily down
+    
     return [_contact_response(c) for c in contacts]
 
 
@@ -241,6 +257,48 @@ async def delete_contact(
     return {"deleted": True}
 
 
+@router.patch("/contacts/{contact_id}", response_model=ContactResponse)
+async def update_contact(
+    contact_id: str,
+    body: ContactUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    contact = await repo.get_contact(db, contact_id)
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+    
+    updated_contact = await repo.update_contact(
+        db,
+        contact,
+        name=body.name,
+        phone_number=body.phone_number,
+        language_preference=body.language_preference,
+        company=body.company,
+        recall_at=body.recall_at,
+    )
+    return _contact_response(updated_contact)
+
+
+class RecallRequest(BaseModel):
+    recall_at: datetime | None
+
+
+@router.patch("/contacts/{contact_id}/recall", response_model=ContactResponse)
+async def set_contact_recall(
+    contact_id: str,
+    body: RecallRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """Manually set or clear the callback reminder time for an outbound contact."""
+    contact = await repo.get_contact(db, contact_id)
+    if not contact:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contact not found")
+    updated = await repo.update_contact(db, contact, recall_at=body.recall_at)
+    return _contact_response(updated)
+
+
 @router.post("/calls/start", response_model=CallResponse)
 async def start_call(
     body: StartCallRequest,
@@ -249,14 +307,16 @@ async def start_call(
 ):
     if body.contact_id:
         call = await outbound_service.start_call(db, body.contact_id)
-        return _call_response(call)
+        refetched = await repo.get_outbound_call(db, call.id)
+        return _call_response(refetched)
     if body.campaign_id and body.phone_number:
         call = await outbound_service.start_call_by_phone(
             db,
             body.campaign_id,
             body.phone_number,
         )
-        return _call_response(call)
+        refetched = await repo.get_outbound_call(db, call.id)
+        return _call_response(refetched)
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="Provide contact_id or campaign_id with phone_number",
@@ -303,7 +363,8 @@ async def sync_call(
     _: User = Depends(get_current_user),
 ):
     call = await outbound_service.sync_call_status(db, call_id)
-    return _call_response(call)
+    refetched = await repo.get_outbound_call(db, call.id)
+    return _call_response(refetched)
 
 
 @router.post("/webhook/retell", response_model=WebhookResponse)

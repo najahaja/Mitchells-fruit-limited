@@ -28,7 +28,7 @@ export function Btn({
       padding: "8px 14px",
     },
     success: {
-      background: C.green,
+      background: C.blue,
       color: "#fff",
       border: "none",
       padding: "8px 16px",
@@ -41,7 +41,7 @@ export function Btn({
     },
     danger: {
       background: "none",
-      color: C.red,
+      color: C.blue,
       border: "none",
       padding: 4,
     },
@@ -90,13 +90,13 @@ export function formatDuration(ms) {
 
 export const STATUS_COLORS = {
   draft: { bg: C.purpleBg, color: C.purple },
-  active: { bg: C.greenBg, color: C.green },
+  active: { bg: C.blueBg, color: C.blue },
   paused: { bg: C.goldBg, color: C.gold },
-  completed: { bg: C.greenBg, color: C.green },
+  completed: { bg: C.blueBg, color: C.blue },
   pending: { bg: C.purpleBg, color: C.purple },
   calling: { bg: C.goldBg, color: C.gold },
-  failed: { bg: C.redBg, color: C.red },
-  ended: { bg: C.greenBg, color: C.green },
+  failed: { bg: C.blueBg, color: C.blue },
+  ended: { bg: C.blueBg, color: C.blue },
   ongoing: { bg: C.goldBg, color: C.gold },
 };
 

@@ -619,14 +619,14 @@ function SpecialCard({
     }
   };
   return <div
-    style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, paddingLeft: 13, display: "flex", flexDirection: "column", gap: 12, transition: "box-shadow .15s, border-color .15s", position: "relative", borderLeft: `3px solid ${special.is_active ? C.green : C.border}` }}
+    style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: 16, paddingLeft: 13, display: "flex", flexDirection: "column", gap: 12, transition: "box-shadow .15s, border-color .15s", position: "relative", borderLeft: `3px solid ${special.is_active ? C.blue : C.border}` }}
     onMouseEnter={(e) => {
       e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,.08)";
-      e.currentTarget.style.borderColor = special.is_active ? C.green : C.border;
+      e.currentTarget.style.borderColor = special.is_active ? C.blue : C.border;
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.boxShadow = "none";
-      e.currentTarget.style.borderColor = special.is_active ? C.green : C.border;
+      e.currentTarget.style.borderColor = special.is_active ? C.blue : C.border;
     }}
   >
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
@@ -635,7 +635,7 @@ function SpecialCard({
             <p style={{ fontFamily: "'Sora',sans-serif", fontSize: 13, fontWeight: 700, color: C.text, margin: 0 }}>
               {special.title}
             </p>
-            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: special.is_active ? C.greenBg : C.borderFaint, color: special.is_active ? C.green : C.textMuted, border: `1px solid ${special.is_active ? C.greenBdr : C.border}` }}>
+            <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: special.is_active ? C.blueBg : C.borderFaint, color: special.is_active ? C.blue : C.textMuted, border: `1px solid ${special.is_active ? C.blueBdr : C.border}` }}>
               {special.is_active ? "\u25CF Active" : "\u25CB Inactive"}
             </span>
           </div>
@@ -651,7 +651,7 @@ function SpecialCard({
         </div>
       </div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.redBg, color: C.red, border: `1px solid ${C.redBdr}`, padding: "3px 10px", borderRadius: 7 }}>
+        <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}`, padding: "3px 10px", borderRadius: 7 }}>
           {special.discount_type === "percentage" ? `${special.discount_value}% off` : `${formatPKR(special.discount_value)} off`}
         </span>
         {special.applicable_items && <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, background: C.purpleBg, color: C.purpleText, border: `1px solid ${C.purpleBdr}`, padding: "3px 10px", borderRadius: 7 }}>
@@ -701,7 +701,7 @@ function Toggle({
       width: 40,
       height: 20,
       borderRadius: 20,
-      background: value ? C.green : "rgba(0,0,0,.18)",
+      background: value ? C.blue : "rgba(0,0,0,.18)",
       border: "none",
       cursor: "pointer",
       transition: "background .2s",
@@ -1002,7 +1002,7 @@ function Menu() {
         .mn-cb { width:15px; height:15px; accent-color:${C.purple}; cursor:pointer; flex-shrink:0; margin:0; }
         .mn-action-btn { background:none; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:5px; border-radius:6px; color:${C.textMuted}; transition:color .12s, background .12s; }
         .mn-action-btn:hover { color:${C.purple}; background:${C.purpleBg}; }
-        .mn-action-btn.del:hover { color:${C.red}; background:${C.redBg}; }
+        .mn-action-btn.del:hover { color:${C.blue}; background:${C.blueBg}; }
         .mn-search-wrap { display:flex; align-items:center; gap:8px; background:${C.card}; border:1.5px solid ${C.inputBorder}; border-radius:8px; padding:7px 12px; flex:1; min-width:0; max-width:280px; transition:border-color .15s, box-shadow .15s; }
         .mn-search-wrap:focus-within { border-color:${C.purple}; box-shadow:0 0 0 3px ${C.purpleBdr}; }
         .mn-search-input { background:none; border:none; outline:none; font-family:'Sora',sans-serif; font-size:13px; color:${C.text}; flex:1; min-width:0; }
@@ -1020,7 +1020,7 @@ function Menu() {
           
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1 style={{ fontSize: 16, fontWeight: 700, color: C.text, margin: 0 }}>Product Catalog</h1>
-            <span style={{ fontSize: 11, fontWeight: 600, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}`, borderRadius: 20, padding: "2px 9px" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}`, borderRadius: 20, padding: "2px 9px" }}>
               Catalog synced
             </span>
             <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>
@@ -1076,7 +1076,7 @@ function Menu() {
   >
               {t === "menu" ? <LayoutList size={14} /> : <Tag size={14} />}
               {t === "menu" ? "Products" : "Specials"}
-              {t === "specials" && activeSpecialCount > 0 && <span style={{ fontSize: 10, background: C.redBg, color: C.red, fontWeight: 700, padding: "1px 7px", borderRadius: 20, lineHeight: 1.6 }}>
+              {t === "specials" && activeSpecialCount > 0 && <span style={{ fontSize: 10, background: C.blueBg, color: C.blue, fontWeight: 700, padding: "1px 7px", borderRadius: 20, lineHeight: 1.6 }}>
                   {activeSpecialCount}
                 </span>}
             </button>)}
@@ -1099,9 +1099,9 @@ function Menu() {
     onClick={() => setShowUnavailOnly((prev) => !prev)}
     className="mn-pill-btn"
     style={{
-      background: showUnavailOnly ? C.redBg : "transparent",
-      color: showUnavailOnly ? C.red : C.textSub,
-      border: `1.5px solid ${showUnavailOnly ? C.redBdr : C.border}`
+      background: showUnavailOnly ? C.blueBg : "transparent",
+      color: showUnavailOnly ? C.blue : C.textSub,
+      border: `1.5px solid ${showUnavailOnly ? C.blueBdr : C.border}`
     }}
   >
                 Out of Stock
@@ -1145,8 +1145,8 @@ function Menu() {
           {[
     { label: "Categories", value: categories.length, color: C.purple },
     { label: "Total Items", value: totalItems, color: C.text },
-    { label: "Available", value: allAvailItems, color: C.green },
-    ...allOffItems > 0 ? [{ label: "86'd", value: allOffItems, color: C.red }] : [],
+    { label: "Available", value: allAvailItems, color: C.blue },
+    ...allOffItems > 0 ? [{ label: "86'd", value: allOffItems, color: C.blue }] : [],
     ...activeSpecialCount > 0 ? [{ label: "Active Specials", value: activeSpecialCount, color: C.gold }] : []
   ].map((s) => <div key={s.label} className="mn-stat-cell">
               <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 18, fontWeight: 800, color: s.color, lineHeight: 1 }}>
@@ -1159,8 +1159,8 @@ function Menu() {
           <div style={{ flex: 1 }} />
           {allOffItems > 0 && <div className="mn-stat-cell" style={{ borderRight: "none" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 120, height: 6, borderRadius: 3, background: C.redBg, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${allAvailItems / totalItems * 100}%`, background: C.green, borderRadius: 3, transition: "width .4s ease" }} />
+                <div style={{ width: 120, height: 6, borderRadius: 3, background: C.blueBg, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${allAvailItems / totalItems * 100}%`, background: C.blue, borderRadius: 3, transition: "width .4s ease" }} />
                 </div>
                 <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 11, color: C.textMuted, fontWeight: 500 }}>
                   {Math.round(allAvailItems / totalItems * 100)}% available
@@ -1183,7 +1183,7 @@ function Menu() {
     const catAvail = cat.items.filter((i) => i.is_available).length;
     const catTotal = cat.items.length;
     const availPct = catTotal > 0 ? catAvail / catTotal : 1;
-    const barColor = availPct === 1 ? C.green : availPct >= 0.5 ? C.gold : C.red;
+    const barColor = availPct === 1 ? C.blue : availPct >= 0.5 ? C.gold : C.blue;
     return <div key={cat.id} className="mn-cat-sidebar-group">
                         <button
       onClick={() => setActiveTab(cat.id)}
@@ -1255,11 +1255,11 @@ function Menu() {
                       <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>items</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                      <span style={{ fontSize: 15, fontWeight: 800, color: C.green }}>{availCount}</span>
+                      <span style={{ fontSize: 15, fontWeight: 800, color: C.blue }}>{availCount}</span>
                       <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>on</span>
                     </div>
                     {offCount > 0 && <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: C.red }}>{offCount}</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: C.blue }}>{offCount}</span>
                         <span style={{ fontSize: 11, color: C.textMuted, fontWeight: 500 }}>86'd</span>
                       </div>}
                     {allCatItems.length > 0 && <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
@@ -1306,7 +1306,7 @@ function Menu() {
       setSelectedItems(/* @__PURE__ */ new Set());
       toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} enabled`);
     }}
-    style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}`, borderRadius: 7, padding: "4px 11px", cursor: "pointer" }}
+    style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}`, borderRadius: 7, padding: "4px 11px", cursor: "pointer" }}
   >Enable all</button>
                     <button
     onClick={async () => {
@@ -1317,7 +1317,7 @@ function Menu() {
       setSelectedItems(/* @__PURE__ */ new Set());
       toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} disabled`);
     }}
-    style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.redBg, color: C.red, border: `1px solid ${C.redBdr}`, borderRadius: 7, padding: "4px 11px", cursor: "pointer" }}
+    style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}`, borderRadius: 7, padding: "4px 11px", cursor: "pointer" }}
   >86 all</button>
                     <button
     onClick={async () => {
@@ -1330,7 +1330,7 @@ function Menu() {
       setSelectedItems(/* @__PURE__ */ new Set());
       toast.success(`${ids.length} item${ids.length !== 1 ? "s" : ""} deleted`);
     }}
-    style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: "transparent", color: C.red, border: `1px solid ${C.redBdr}`, borderRadius: 7, padding: "4px 11px", cursor: "pointer" }}
+    style={{ fontFamily: "'Sora',sans-serif", fontSize: 12, fontWeight: 700, background: "transparent", color: C.blue, border: `1px solid ${C.blueBdr}`, borderRadius: 7, padding: "4px 11px", cursor: "pointer" }}
   >Delete</button>
                     <button onClick={() => setSelectedItems(/* @__PURE__ */ new Set())} style={{ marginLeft: "auto", fontFamily: "'Sora',sans-serif", fontSize: 12, color: C.textMuted, background: "transparent", border: "none", cursor: "pointer", padding: "4px 0" }}>✕ Clear</button>
                   </div>}
@@ -1376,7 +1376,7 @@ function Menu() {
                               <div style={{ minWidth: 0 }}>  
                                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                   <p style={{ fontSize: 13, fontWeight: 600, color: item.is_available ? C.text : C.textMuted, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textDecoration: item.is_available ? "none" : "line-through" }}>{item.name}</p>
-                                  {!item.is_available && <span style={{ fontSize: 10, fontWeight: 700, background: C.redBg, color: C.red, border: `1px solid ${C.redBdr}`, borderRadius: 4, padding: "1px 5px", flexShrink: 0, lineHeight: 1.4 }}>OFF</span>}
+                                  {!item.is_available && <span style={{ fontSize: 10, fontWeight: 700, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}`, borderRadius: 4, padding: "1px 5px", flexShrink: 0, lineHeight: 1.4 }}>OFF</span>}
                                 </div>
                                 {item.description && <p style={{ fontSize: 11, color: C.textMuted, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.description}</p>}
                               </div>
@@ -1508,7 +1508,7 @@ function Menu() {
   }
               <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, flexWrap: "wrap", animation: "fadeUp .25s both" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 3, height: 16, borderRadius: 2, background: C.green, flexShrink: 0 }} />
+                  <div style={{ width: 3, height: 16, borderRadius: 2, background: C.blue, flexShrink: 0 }} />
                   <span style={{ fontFamily: "'Sora',sans-serif", fontSize: 13, fontWeight: 700, color: C.text }}>
                     {activeSpecialCount} active
                   </span>

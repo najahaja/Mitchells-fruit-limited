@@ -282,7 +282,7 @@ function Agents() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      color: C.green
+      color: C.blue
     }}
   >
             <Volume2 size={24} />
@@ -455,8 +455,8 @@ function Agents() {
     style={{
       display: "inline-block",
       marginTop: "6px",
-      background: C.greenLight,
-      color: C.green,
+      background: C.blueLight,
+      color: C.blue,
       fontSize: "0.68rem",
       fontWeight: 800,
       padding: "2px 8px",
@@ -494,7 +494,7 @@ function Agents() {
       alignItems: "center"
     }}
   >
-                    {copiedId === agent.agent_id ? <Check size={13} color={C.green} /> : <Copy size={13} />}
+                    {copiedId === agent.agent_id ? <Check size={13} color={C.blue} /> : <Copy size={13} />}
                   </button>
                 </div>
               </div>

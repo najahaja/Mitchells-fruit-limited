@@ -484,7 +484,7 @@ function WeeklyScheduleEditor({ value, onChange, defaultOpen, defaultClose }) {
         cursor: "pointer",
         padding: 0,
         flexShrink: 0,
-        background: d.closed ? C.border : C.green,
+        background: d.closed ? C.border : C.blue,
         transition: "background .18s"
       }}
     >
@@ -526,7 +526,7 @@ function ToggleRow({ label, desc, checked, onChange }) {
     borderRadius: 11,
     border: "none",
     cursor: "pointer",
-    background: checked ? C.green : C.border,
+    background: checked ? C.blue : C.border,
     transition: "background .2s",
     padding: 0,
     flexShrink: 0
@@ -814,12 +814,12 @@ function SettingsPage() {
     gap: 14,
     padding: "14px 16px",
     borderRadius: 11,
-    border: `1.5px solid ${f.is_active ? C.greenBdr : C.border}`,
-    background: f.is_active ? C.greenBg : C.bg,
+    border: `1.5px solid ${f.is_active ? "#b8d4ff" : C.border}`,
+    background: f.is_active ? "#e8f2ff" : C.bg,
     transition: "border-color .2s, background .2s",
     flexWrap: "wrap"
   }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: f.is_active ? "rgba(29,184,122,.15)" : C.border, display: "flex", alignItems: "center", justifyContent: "center", color: f.is_active ? C.green : C.textMuted, transition: "all .2s" }}>
+            <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: f.is_active ? "rgba(3,76,161,0.12)" : C.border, display: "flex", alignItems: "center", justifyContent: "center", color: f.is_active ? C.blue : C.textMuted, transition: "all .2s" }}>
               <PhoneCall size={19} />
             </div>
             <div style={{ flex: 1, minWidth: 150 }}>
@@ -836,13 +836,13 @@ function SettingsPage() {
     borderRadius: 13,
     border: "none",
     cursor: "pointer",
-    background: f.is_active ? C.green : C.border,
+    background: f.is_active ? C.blue : C.border,
     transition: "background .2s",
     padding: 0
   }}>
                 <span style={{ position: "absolute", top: 3, width: 20, height: 20, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.22)", left: f.is_active ? 25 : 3, transition: "left .2s" }} />
               </button>
-              <span style={{ fontFamily: C.font, fontSize: ".65rem", fontWeight: 700, color: f.is_active ? C.green : C.textMuted }}>
+              <span style={{ fontFamily: C.font, fontSize: ".65rem", fontWeight: 700, color: f.is_active ? C.blue : C.textMuted }}>
                 {f.is_active ? "Active" : "Paused"}
               </span>
             </div>
@@ -1014,8 +1014,8 @@ function SettingsPage() {
           height: 18,
           borderRadius: "50%",
           flexShrink: 0,
-          border: `2px solid ${p.is_active ? C.green : C.border}`,
-          background: p.is_active ? C.green : C.white,
+          border: `2px solid ${p.is_active ? C.blue : C.border}`,
+          background: p.is_active ? C.blue : C.white,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1033,8 +1033,8 @@ function SettingsPage() {
                     <span style={{ fontFamily: C.font, fontSize: ".84rem", fontWeight: p.is_active ? 700 : 600, color: p.is_active ? C.text : C.textSub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {p.name}
                     </span>
-                    {p.is_active && <span style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: C.font, fontSize: ".62rem", fontWeight: 700, color: C.green, background: "rgba(29,184,122,.12)", padding: "2px 8px", borderRadius: 100, flexShrink: 0 }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, animation: "ldot 1.8s ease-in-out infinite" }} />
+                    {p.is_active && <span style={{ display: "flex", alignItems: "center", gap: 4, fontFamily: C.font, fontSize: ".62rem", fontWeight: 700, color: C.blue, background: "rgba(29,184,122,.12)", padding: "2px 8px", borderRadius: 100, flexShrink: 0 }}>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.blue, animation: "ldot 1.8s ease-in-out infinite" }} />
                         Active
                       </span>}
                   </div>
@@ -1062,7 +1062,7 @@ function SettingsPage() {
           handleDeletePrompt(p.id);
         }}
         title="Delete"
-        style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.redBdr}`, background: C.redBg, color: C.red, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+        style={{ width: 28, height: 28, borderRadius: 6, border: `1px solid ${C.blueBdr}`, background: C.blueBg, color: C.blue, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
       >
                       <Trash2 size={11} />
                     </button>
@@ -1129,8 +1129,8 @@ function SettingsPage() {
                 {assignedNumber ? "Assigned by Retell \xB7 Cannot be changed here" : "No number assigned \u2014 contact support"}
               </p>
             </div>
-            {assignedNumber && <span style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: C.font, fontSize: ".7rem", fontWeight: 700, background: C.greenBg, color: C.green, padding: "4px 11px", borderRadius: 100, border: `1px solid ${C.greenBdr}`, flexShrink: 0 }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.green, animation: "ldot 1.6s ease-in-out infinite" }} />
+            {assignedNumber && <span style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: C.font, fontSize: ".7rem", fontWeight: 700, background: C.blueBg, color: C.blue, padding: "4px 11px", borderRadius: 100, border: `1px solid ${C.blueBdr}`, flexShrink: 0 }}>
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.blue, animation: "ldot 1.6s ease-in-out infinite" }} />
                 Active
               </span>}
           </div>
@@ -1243,9 +1243,9 @@ function SettingsPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 11px", borderRadius: 8, background: f.is_active ? C.greenBg : C.bg, border: `1px solid ${f.is_active ? C.greenBdr : C.border}` }}>
-            <span style={{ width: 5, height: 5, borderRadius: "50%", background: f.is_active ? C.green : C.textLight, flexShrink: 0, animation: f.is_active ? "ldot 1.8s ease-in-out infinite" : "none" }} />
-            <span className="vx-topbar-meta" style={{ fontFamily: C.font, fontSize: ".71rem", fontWeight: 700, color: f.is_active ? C.green : C.textMuted }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 11px", borderRadius: 8, background: f.is_active ? C.blueBg : C.bg, border: `1px solid ${f.is_active ? C.blueBdr : C.border}` }}>
+            <span style={{ width: 5, height: 5, borderRadius: "50%", background: f.is_active ? C.blue : C.textLight, flexShrink: 0, animation: f.is_active ? "ldot 1.8s ease-in-out infinite" : "none" }} />
+            <span className="vx-topbar-meta" style={{ fontFamily: C.font, fontSize: ".71rem", fontWeight: 700, color: f.is_active ? C.blue : C.textMuted }}>
               {f.is_active ? "Agent live" : "Paused"}
             </span>
             <button onClick={() => upd("is_active", !f.is_active)} style={{
@@ -1256,7 +1256,7 @@ function SettingsPage() {
     border: "none",
     cursor: "pointer",
     padding: 0,
-    background: f.is_active ? C.green : C.border,
+    background: f.is_active ? C.blue : C.border,
     transition: "background .2s"
   }}>
               <span style={{ position: "absolute", top: 2, width: 14, height: 14, borderRadius: "50%", background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.2)", left: f.is_active ? 16 : 2, transition: "left .2s" }} />

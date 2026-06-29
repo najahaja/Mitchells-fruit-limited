@@ -201,6 +201,15 @@ const getOutboundCallsApi = async (skip = 0, limit = 50, campaignId) => {
 };
 const getOutboundCallApi = async (id) =>
   (await axiosInstance.get(`/outbound/calls/${id}`)).data;
+const updateOutboundContactApi = async (contactId, data) =>
+  (await axiosInstance.patch(`/outbound/contacts/${contactId}`, data)).data;
+
+const setContactRecallApi = async (contactId, recallAt) =>
+  (await axiosInstance.patch(`/outbound/contacts/${contactId}/recall`, { recall_at: recallAt })).data;
+
+const setCallRecallApi = async (callId, recallAt) =>
+  (await axiosInstance.patch(`/retell/calls/${callId}/recall`, { recall_at: recallAt })).data;
+
 export {
   activatePromptApi,
   cancelOrderApi,
@@ -241,6 +250,8 @@ export {
   registerApi,
   reprintOrderApi,
   resetPasswordApi,
+  setCallRecallApi,
+  setContactRecallApi,
   startOutboundCampaignApi,
   startOutboundCallApi,
   addOutboundContactApi,
@@ -248,6 +259,7 @@ export {
   deleteOutboundCampaignApi,
   deleteOutboundContactApi,
   updateOutboundCampaignApi,
+  updateOutboundContactApi,
   updateCategoryApi,
   updateItemApi,
   updatePromptApi,

@@ -102,6 +102,9 @@ class CallLog(Base):
     customer_name_extracted: Mapped[str | None] = mapped_column(String, nullable=True)
     reservation_date: Mapped[str | None] = mapped_column(String, nullable=True)
     party_size: Mapped[str | None] = mapped_column(String, nullable=True)
+    recall_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    customer_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    feedback_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # ORM Relationship: Allows us to access the associated order directly (e.g. call_log.order_details)
@@ -374,6 +377,7 @@ class OutboundContact(Base):
         "metadata", JSON, nullable=True
     )
     status: Mapped[str] = mapped_column(String, default="pending")
+    recall_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -459,6 +463,10 @@ async def init_db():
             "UPDATE agent_settings SET restaurant_info = 'Mitchell''s is a historic food manufacturer in Pakistan, producing high-quality jams, squashes, ketchups, sauces, and confectionery since 1933.' WHERE restaurant_info = 'We are open daily from 11am to 10pm.' OR restaurant_info IS NULL",
             "ALTER TABLE outbound_contacts ADD COLUMN IF NOT EXISTS language_preference VARCHAR DEFAULT 'Urdu'",
             "ALTER TABLE outbound_contacts DROP COLUMN IF EXISTS email",
+            "ALTER TABLE outbound_contacts ADD COLUMN IF NOT EXISTS recall_at TIMESTAMPTZ",
+            "ALTER TABLE call_logs ADD COLUMN IF NOT EXISTS recall_at TIMESTAMPTZ",
+            "ALTER TABLE call_logs ADD COLUMN IF NOT EXISTS customer_feedback TEXT",
+            "ALTER TABLE call_logs ADD COLUMN IF NOT EXISTS feedback_rating INTEGER",
         ]
         
         # Use nested transactions (savepoints) so if one migration fails, we can continue the rest

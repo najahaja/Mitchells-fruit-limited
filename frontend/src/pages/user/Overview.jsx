@@ -70,9 +70,9 @@ function isStoreOpen(s) {
 }
 
 const SENTIMENT = {
-  positive: { label: "Positive", color: C.green, bg: C.greenBg },
+  positive: { label: "Positive", color: C.blue, bg: C.blueBg },
   neutral: { label: "Neutral", color: C.gold, bg: C.goldBg },
-  negative: { label: "Frustrated", color: C.red, bg: C.redBg },
+  negative: { label: "Frustrated", color: C.blue, bg: C.blueBg },
 };
 
 function hasOrder(c) {
@@ -258,7 +258,7 @@ export default function Overview() {
         @keyframes fadeIn  { from{opacity:0} to{opacity:1} }
         @keyframes vxOrb   { 0%,100%{transform:scale(1) translateY(0)} 50%{transform:scale(1.06) translateY(-20px)} }
         @keyframes spin    { to{transform:rotate(360deg)} }
-        @keyframes pulse   { 0%,100%{box-shadow:0 0 0 0 rgba(226,80,76,.38)} 70%{box-shadow:0 0 0 10px rgba(226,80,76,0)} }
+        @keyframes pulse   { 0%,100%{box-shadow:0 0 0 0 rgba(217,159,24,.38)} 70%{box-shadow:0 0 0 10px rgba(217,159,24,0)} }
         @keyframes ldot    { 0%,100%{opacity:1} 50%{opacity:.25} }
         .vx-row:hover     { background: rgba(0,0,0,.025) !important; }
         .vx-btn:hover     { opacity:.7 !important; }
@@ -336,14 +336,14 @@ export default function Overview() {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                background: storeOpen ? C.greenBg : C.inputBg,
-                border: `1px solid ${storeOpen ? C.greenBdr : C.border}`,
+                background: storeOpen ? C.blueBg : C.inputBg,
+                border: `1px solid ${storeOpen ? C.blueBdr : C.border}`,
                 borderRadius: 100,
                 padding: "5px 13px 5px 9px",
                 fontFamily: "Sora,sans-serif",
                 fontSize: ".71rem",
                 fontWeight: 700,
-                color: storeOpen ? C.green : C.textMuted,
+                color: storeOpen ? C.blue : C.textMuted,
               }}
             >
               <span
@@ -351,7 +351,7 @@ export default function Overview() {
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  background: storeOpen ? C.green : "rgba(0,0,0,.2)",
+                  background: storeOpen ? C.blue : "rgba(0,0,0,.2)",
                   animation: storeOpen ? "ldot 1.4s ease-in-out infinite" : "none",
                   flexShrink: 0,
                 }}
@@ -378,11 +378,11 @@ export default function Overview() {
                 cursor: aiToggling ? "not-allowed" : "pointer",
                 background: settings?.is_active
                   ? "linear-gradient(135deg,#034ca1,#023168)"
-                  : "linear-gradient(135deg,#e6524e,#c2403d)",
+                  : "linear-gradient(135deg,#e5b954,#d99f18)",
                 color: "#fff",
                 boxShadow: settings?.is_active
                   ? "0 2px 14px rgba(3,76,161,.3), inset 0 1px 0 rgba(255,255,255,.14)"
-                  : "0 2px 14px rgba(217,65,64,.3), inset 0 1px 0 rgba(255,255,255,.1)",
+                  : "0 2px 14px rgba(217,159,24,.3), inset 0 1px 0 rgba(255,255,255,.1)",
                 animation: !settings?.is_active && !aiToggling ? "pulse 2s ease-in-out infinite" : "none",
                 transition: "opacity .2s",
               }}
@@ -458,16 +458,16 @@ export default function Overview() {
                   label: "Block a Number",
                   sub: "Ban a spam or problem caller",
                   icon: <PhoneOff size={16} />,
-                  accent: C.red,
-                  rawAccent: "#E54545",
+                  accent: C.purple,
+                  rawAccent: "#1B3F7A",
                   path: "/dashboard/calls",
                 },
                 {
                   label: "Edit AI Greeting",
                   sub: "Change prompt or hours announcement",
                   icon: <BookOpen size={16} />,
-                  accent: C.gold,
-                  rawAccent: "#C8973A",
+                  accent: C.purple,
+                  rawAccent: "#1B3F7A",
                   path: "/dashboard/settings",
                 },
               ].map((qa) => (
@@ -602,11 +602,11 @@ export default function Overview() {
                   value: formatPKR(aiRevenue),
                   sub: "gross revenue",
                   icon: <DollarSign size={14} />,
-                  accent: C.green,
-                  rawAccent: "#1DB87A",
-                  iconBg: "rgba(29,184,122,.1)",
-                  iconBorder: "rgba(29,184,122,.2)",
-                  topLine: C.green,
+                  accent: C.purple,
+                  rawAccent: "#1B3F7A",
+                  iconBg: "rgba(27,63,122,.1)",
+                  iconBorder: "rgba(27,63,122,.2)",
+                  topLine: C.purple,
                 },
                 {
                   label: "Minutes Used",
@@ -615,22 +615,22 @@ export default function Overview() {
                     : (report?.summary.total_minutes ?? 0).toLocaleString(),
                   sub: "API minutes",
                   icon: <Timer size={14} />,
-                  accent: C.gold,
-                  rawAccent: "#C8973A",
-                  iconBg: "rgba(200,151,58,.1)",
-                  iconBorder: "rgba(200,151,58,.2)",
-                  topLine: C.gold,
+                  accent: C.purple,
+                  rawAccent: "#1B3F7A",
+                  iconBg: "rgba(27,63,122,.1)",
+                  iconBorder: "rgba(27,63,122,.2)",
+                  topLine: C.purple,
                 },
                 {
                   label: "Missed / Failed",
                   value: reportLoading ? "—" : missedCount.toLocaleString(),
                   sub: reportLoading || missedPct === null ? "didn't complete" : `${missedPct}% of total calls`,
                   icon: <PhoneOff size={14} />,
-                  accent: C.red,
-                  rawAccent: "#E54545",
-                  iconBg: "rgba(229,69,69,.1)",
-                  iconBorder: "rgba(229,69,69,.2)",
-                  topLine: C.red,
+                  accent: C.purple,
+                  rawAccent: "#1B3F7A",
+                  iconBg: "rgba(27,63,122,.1)",
+                  iconBorder: "rgba(27,63,122,.2)",
+                  topLine: C.purple,
                 },
               ].map((card) => (
                 <div
@@ -783,11 +783,11 @@ export default function Overview() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                           {amt != null && (
-                            <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".76rem", fontWeight: 700, color: C.green }}>
+                            <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".76rem", fontWeight: 700, color: C.blue }}>
                               {formatPKR(amt)}
                             </span>
                           )}
-                          <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}` }}>
+                          <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}` }}>
                             Ordered
                           </span>
                         </div>
@@ -888,7 +888,7 @@ export default function Overview() {
                             {sent.label}
                           </span>
                         ) : c.order_booked ? (
-                          <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}`, flexShrink: 0 }}>
+                          <span style={{ fontFamily: "Sora,sans-serif", fontSize: ".61rem", fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: C.blueBg, color: C.blue, border: `1px solid ${C.blueBdr}`, flexShrink: 0 }}>
                             Ordered
                           </span>
                         ) : c.call_reason ? (
